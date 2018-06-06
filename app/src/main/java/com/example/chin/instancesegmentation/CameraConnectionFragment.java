@@ -208,7 +208,7 @@ public class CameraConnectionFragment extends Fragment {
     private final Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
     /**
-     * A {@link OnImageAvailableListener} to receive frames as they are available.
+     * A {@link OnImageAvailableListener} to receive frame when a still shot is taken.
      */
     private final OnImageAvailableListener mImageListener;
 
@@ -266,22 +266,6 @@ public class CameraConnectionFragment extends Fragment {
      * Whether the current camera device supports Flash or not.
      */
     private boolean mFlashSupported;
-
-    /**
-     * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
-     * still image is ready to be saved.
-     */
-    private final ImageReader.OnImageAvailableListener mOnImageAvailableListener
-            = new ImageReader.OnImageAvailableListener() {
-
-        @Override
-        public void onImageAvailable(ImageReader reader) {
-            // TODO put this in CameraActivity.
-            Image image = reader.acquireLatestImage();
-            CameraActivity activity = (CameraActivity)getActivity();
-            activity.imageAvailable(image);
-        }
-    };
 
     private final ConnectionCallback mCameraConnectionCallback;
 
@@ -816,8 +800,7 @@ public class CameraConnectionFragment extends Fragment {
                 return;
             }
 
-            mImageReader.setOnImageAvailableListener(
-                    mOnImageAvailableListener, mBackgroundHandler);
+            mImageReader.setOnImageAvailableListener(mImageListener, mBackgroundHandler);
 
             // This is the CaptureRequest.Builder that we use to take a picture.
             final CaptureRequest.Builder captureBuilder =

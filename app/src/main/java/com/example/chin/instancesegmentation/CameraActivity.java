@@ -150,65 +150,6 @@ public abstract class CameraActivity extends Activity
         //processImage();
     }
 
-    public void imageAvailable(final Image image) {
-        if (mPreviewWidth == 0 || mPreviewHeight == 0) {
-            return;
-        }
-        if (mRgbBytes == null) {
-            mRgbBytes = new int[mPreviewWidth * mPreviewHeight];
-        }
-        try {
-            if (image == null) {
-                return;
-            }
-
-            if (mIsProcessingFrame) {
-                image.close();
-                return;
-            }
-            mIsProcessingFrame = true;
-            Trace.beginSection("imageAvailable");
-            final Plane[] planes = image.getPlanes();
-            fillBytes(planes, mYuvBytes);
-            mYRowStride = planes[0].getRowStride();
-                final int uvRowStride = planes[1].getRowStride();
-            final int uvPixelStride = planes[1].getPixelStride();
-
-            mImageConverter =
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            ImageUtils.convertYUV420ToARGB8888(
-                                    mYuvBytes[0],
-                                    mYuvBytes[1],
-                                    mYuvBytes[2],
-                                    mPreviewWidth,
-                                    mPreviewHeight,
-                                    mYRowStride,
-                                    uvRowStride,
-                                    uvPixelStride,
-                                    mRgbBytes);
-                        }
-                    };
-
-            mPostInferenceCallback =
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            image.close();
-                            mIsProcessingFrame = false;
-                        }
-                    };
-
-            processImage();
-        } catch (final Exception e) {
-            LOGGER.e(e, "Exception!");
-            Trace.endSection();
-            return;
-        }
-        Trace.endSection();
-    }
-
     @Override
     public void onImageAvailable(final ImageReader reader) {
         LOGGER.i("onImageAvailable");
