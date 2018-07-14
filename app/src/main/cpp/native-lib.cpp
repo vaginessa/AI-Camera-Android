@@ -4,32 +4,8 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/features2d/features2d.hpp>
 
-extern "C" JNIEXPORT jstring
-
-JNICALL
-Java_com_example_chin_nativeopencvtest_MainActivity_stringFromJNI(
-        JNIEnv *env,
-        jobject /* this */) {
-    std::string hello = "Hello from C++";
-    return env->NewStringUTF(hello.c_str());
-}
-
 using namespace std;
 using namespace cv;
-
-extern "C"
-{
-    void JNICALL Java_com_example_chin_nativeopencvtest_MainActivity_salt(JNIEnv *env, jobject instance,
-                                                                           jlong matAddrGray,
-                                                                           jint nbrElem) {
-        Mat &mGr = *(Mat *) matAddrGray;
-        for (int k = 0; k < nbrElem; k++) {
-            int i = rand() % mGr.cols;
-            int j = rand() % mGr.rows;
-            mGr.at<uchar>(j, i) = 255;
-        }
-    }
-}
 
 extern "C"
 {
@@ -41,80 +17,7 @@ extern "C"
     }
 }
 
-void alphaBlend(cv::Mat& foreground, cv::Mat& background, cv::Mat& alpha, cv::Mat& outImage)
-{
-    const cv::Mat* arrays[] = { &foreground, &background, &alpha, &outImage, NULL };
-    cv::Mat planes[4];
-    cv::NAryMatIterator it(arrays, planes);
-
-    for (int i = 0; i < it.nplanes; ++i, ++it)
-    {
-        for (int j = 0; j < it.size; ++j)
-        {
-            auto fgPixel = it.planes[0].at<cv::Vec3b>(j);
-            auto bgPixel = it.planes[1].at<cv::Vec3b>(j);
-            auto alpha = it.planes[2].at<float>(j);
-            for (int k = 0; k < 3; ++k)
-            {
-                auto value = alpha * fgPixel[k] + (1.0 - alpha) * bgPixel[k];
-                it.planes[3].at<cv::Vec3b>(j)[k] = value;
-            }
-        }
-    }
-}
-
-void alphaBlend2(cv::Mat& foreground, cv::Mat& background, cv::Mat& alpha, cv::Mat& outImage)
-{
-	for (int i = 0; i < outImage.rows; ++i)
-	{
-		for (int j = 0; j < outImage.cols; ++j)
-		{
-			auto fgPixel = foreground.at<cv::Vec3b>(i, j);
-			auto bgPixel = background.at<cv::Vec3b>(i, j);
-			auto alphaVal = 1.0; //alpha.at<float>(i, j);
-
-			for (int k = 0; k < outImage.channels(); ++k)
-			{
-				auto value = alphaVal * fgPixel[k] + (1.0 - alphaVal) * bgPixel[k];
-				outImage.at<cv::Vec3b>(i, j)[k] = value;
-			}
-		}
-	}
-}
-
-void testLoop(Mat &img, Mat &result)
-{
-    for (int i = 0; i < img.rows; ++i)
-    {
-        for (int j = 0; j < img.cols; ++j)
-        {
-            auto p = img.data + i * img.step[0] + j * img.step[1];
-            auto avg = (p[0] + p[1] + p[2]) / 3;
-            auto res = result.data + i * result.step[0] + j * result.step[1];
-
-            res[0] = avg;
-            res[1] = avg;
-            res[2] = avg;
-        }
-    }
-
-    /*
-    for (int i = 0; i < img.rows; ++i)
-    {
-        auto row = img.ptr<Vec3b>(i);
-        auto resultRow = result.ptr<Vec3b>(i);
-        for (int j = 0; j < img.cols; ++j)
-        {
-            auto avg = (row[j][0] + row[j][1] + row[j][2]) / 3;
-            resultRow[j][0] = avg;
-            resultRow[j][1] = avg;
-            resultRow[j][2] = avg;
-        }
-    }
-     */
-}
-
-void alphaBlend3(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::Mat &result)
+void alphaBlendWithThreshold(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::Mat &result, float thresh)
 {
 	for (int i = 0; i < result.rows; ++i)
 	{
@@ -127,8 +30,7 @@ void alphaBlend3(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::M
 
 			auto val = (float)*alphaPtr;
 
-			//std::cout << val << " ";
-
+            val = val > thresh ? 1.0 : val;
 
 			for (int k = 0; k < result.channels(); ++k)
 			{
@@ -141,64 +43,71 @@ void alphaBlend3(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::M
 
 extern "C"
 {
-void JNICALL Java_com_example_chin_nativeopencvtest_MainActivity_process2(JNIEnv *env,
-                                                                           jobject instance,
-                                                                           jlong matAddr,
-                                                                           jlong maskAddr,
-                                                                           jlong resultAddr) {
-
-    Mat &img = *(Mat *) matAddr;
-    Mat &result = *(Mat *) resultAddr;
-    testLoop(img, result);
-}
-}
-
-extern "C"
-{
 void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process(JNIEnv *env,
-                                                                         jobject instance,
-                                                                         jlong matAddr,
-                                                                         jlong maskAddr,
-                                                                         jlong resultAddr) {
+                                                                                 jobject instance,
+                                                                                 jlong matAddr,
+                                                                                 jlong maskAddr,
+                                                                                 jlong resultAddr,
+                                                                                 jint previewWidth,
+                                                                                 jint previewHeight) {
+
+    const int erodeIter = 2;
+    const int dilateIter = 1;
+    const int elementSize = 40;
+    const int erodeElementSize = 50;
+    const float thresh = 0.1;
+
     Mat &img = *(Mat *) matAddr;
     Mat &maskImg = *(Mat *) maskAddr;
     Mat &result = *(Mat *) resultAddr;
 
-    // The mask needs to be grayscale.
-    cv::cvtColor(maskImg, maskImg, cv::COLOR_BGR2GRAY);
-    cv::threshold(maskImg, maskImg, 100, 255, cv::THRESH_BINARY);
+    // Resize mask to original size;
+    maskImg.convertTo(maskImg, CV_8UC1);
+    int sideLength = max(previewHeight, previewWidth);
+    Size size(sideLength, sideLength);
+    resize(maskImg, maskImg, size);
+    cv::threshold(maskImg, maskImg, 0, 255, cv::THRESH_BINARY);
 
-    // Do edge detection.
-    auto canny = cv::Mat(img.size(), img.type());
-    cv::Canny(img, canny, 150, 200);
+    // Crop mask back to the original dimensions.
+    auto rect = Rect(0, 0, previewWidth, previewHeight);
+    maskImg = maskImg(rect);
 
-    // Dilate to get sure background.
-    auto structuringElement = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(50, 50));
+    // Find edges.
+    auto refinedMask = cv::Mat(img.size(), img.type());
+    cv::Canny(img, refinedMask, 50, 100);
+
+    auto structuringElement = cv::getStructuringElement(
+            cv::MORPH_RECT,
+            cv::Size(elementSize, elementSize));
+
+    auto erodeStructuringElement = cv::getStructuringElement(
+            cv::MORPH_RECT,
+            cv::Size(erodeElementSize, erodeElementSize));
+
+    // Get sure background.
     auto sureBg = cv::Mat(maskImg.size(), maskImg.type());
-    cv::dilate(maskImg, sureBg, structuringElement, cv::Point(-1, -1), 2);
+    cv::dilate(maskImg, sureBg, structuringElement, cv::Point(-1, -1), dilateIter);
 
-    // Remove lines in sure background but keep lines in sure foreground.
-    canny = canny | maskImg; // Replace maskImg with sure foreground.
-    canny = canny & sureBg;
+    // Get sure foreground.
+    auto sureFg = cv::Mat(maskImg.size(), maskImg.type());
+    cv::erode(maskImg, sureFg, erodeStructuringElement, cv::Point(-1, -1), erodeIter);
+
+    refinedMask = refinedMask | sureFg;
+    refinedMask = refinedMask & sureBg;
 
     // Get refined mask by closing.
-    cv::morphologyEx(canny, canny, cv::MORPH_CLOSE, structuringElement);
+    cv::morphologyEx(refinedMask, refinedMask, cv::MORPH_CLOSE, structuringElement);
 
-    // Apply blur to original image.
-    cv::Mat imgCopy;
-    cv::GaussianBlur(img, imgCopy, cv::Size(5, 3), 50.0);
+    // Blur the background.
+    cv::Mat imgBlur;
+    cv::blur(img, imgBlur, cv::Size(7, 7));
 
     // Do distance transform on the mask to get the amount for alpha blending.
     cv::Mat dist;
-    cv::distanceTransform(canny, dist, cv::DIST_L2, 3);
+    cv::distanceTransform(refinedMask, dist, cv::DIST_L2, 3);
     cv::normalize(dist, dist, 0.0, 1.0, cv::NORM_MINMAX);
 
     // Alpha blend the foreground onto the blurred image.
-
-    // These two are for testing.
-    auto bg = cv::Mat(img.size(), img.type(), cv::Scalar::all(0));
-    //dist = cv::Mat(img.size(), CV_32FC1, cv::Scalar::all(0.5));
-
-    alphaBlend3(img, bg, dist, result);
+    alphaBlendWithThreshold(img, imgBlur, dist, result, thresh);
 }
 }

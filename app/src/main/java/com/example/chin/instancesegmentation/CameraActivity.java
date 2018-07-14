@@ -43,6 +43,9 @@ import android.widget.Toast;
 import java.nio.ByteBuffer;
 import com.example.chin.instancesegmentation.env.Logger;
 import com.example.chin.instancesegmentation.env.ImageUtils;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.OpenCVLoader;
 
 
 public abstract class CameraActivity extends Activity
@@ -69,6 +72,24 @@ public abstract class CameraActivity extends Activity
 
     private Runnable mPostInferenceCallback;
     private Runnable mImageConverter;
+
+    private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS: {
+                    LOGGER.d("OpenCV loaded successfully");
+                    // Load ndk built module, as specified in moduleName in build.gradle
+                    // after opencv initialization
+                    System.loadLibrary("native-lib");
+                }
+                break;
+                default: {
+                    super.onManagerConnected(status);
+                }
+            }
+        }
+    };
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -196,6 +217,7 @@ public abstract class CameraActivity extends Activity
                         }
                     };
 
+            /*
             mPostInferenceCallback =
                     new Runnable() {
                         @Override
@@ -204,6 +226,7 @@ public abstract class CameraActivity extends Activity
                             mIsProcessingFrame = false;
                         }
                     };
+            */
 
             processImage();
         } catch (final Exception e) {
@@ -224,6 +247,14 @@ public abstract class CameraActivity extends Activity
     public synchronized void onResume() {
         LOGGER.d("onResume " + this);
         super.onResume();
+
+        if (!OpenCVLoader.initDebug()) {
+            LOGGER.d("Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, _baseLoaderCallback);
+        } else {
+            LOGGER.d("OpenCV library found inside package. Using it!");
+            _baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
 
         mHandlerThread = new HandlerThread("inference");
         mHandlerThread.start();

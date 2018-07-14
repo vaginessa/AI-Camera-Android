@@ -5,10 +5,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.RectF;
 import android.media.ImageReader;
 
-import android.os.SystemClock;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
@@ -23,6 +21,10 @@ import java.util.List;
 
 import com.example.chin.instancesegmentation.env.Logger;
 import com.example.chin.instancesegmentation.env.ImageUtils;
+
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
 
 public class DetectorActivity extends CameraActivity implements ImageReader.OnImageAvailableListener {
     private static final Logger LOGGER = new Logger();
@@ -56,6 +58,8 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     private boolean mComputingDetection = false;
 
     private OverlayView mTrackingOverlay;
+
+    public native void process(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
 
     @Override
     public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -135,6 +139,75 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     protected void processImage() {
         ++mTimestamp;
         final long currTimestamp = mTimestamp;
+
+        if (mComputingDetection) {
+            readyForNextImage();
+            return;
+        }
+        mComputingDetection = true;
+
+        // This is temporary for testing.
+        //mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sana);
+        //mPreviewHeight = mRgbFrameBitmap.getHeight();
+        //mPreviewWidth = mRgbFrameBitmap.getWidth();
+
+        mRgbFrameBitmap.setPixels(
+                getRgbBytes(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
+        // Rotate image to the correct orientation.
+        mRgbFrameBitmap = Bitmap.createBitmap(
+                mRgbFrameBitmap, 0, 0, mPreviewWidth, mPreviewHeight, mFrameToCropTransform, true);
+        // The MaskRCNN implementation expects a square image.
+        mCroppedBitmap = createSquaredBitmap(mRgbFrameBitmap);
+
+        final int cropSize = 300;
+        mCroppedBitmap = Bitmap.createScaledBitmap(mCroppedBitmap, cropSize, cropSize, true);
+
+        // For examining the actual TF input.
+        if (SAVE_PREVIEW_BITMAP) {
+            ImageUtils.saveBitmap(mCroppedBitmap);
+        }
+
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                LOGGER.i("Running detection on image " + currTimestamp);
+                final List<Classifier.Recognition> results = mDetector.recognizeImage(mCroppedBitmap);
+
+                if (results.size() == 0)
+                    return;
+
+                // Just take the first object recognised for now.
+                final Classifier.Recognition result = results.get(0);
+                final int[] mask = result.getMask();
+
+                Mat img = new Mat();
+                Utils.bitmapToMat(mRgbFrameBitmap, img);
+                Mat maskMat = new Mat(cropSize, cropSize, CvType.CV_32SC1);
+                Mat outImage = new Mat(img.size(), img.type());
+                maskMat.put(0, 0, mask);
+
+                // Refine mask and blur background.
+                process(img.getNativeObjAddr(),
+                        maskMat.getNativeObjAddr(),
+                        outImage.getNativeObjAddr(),
+                        mRgbFrameBitmap.getWidth(),
+                        mRgbFrameBitmap.getHeight());
+
+                Utils.matToBitmap(outImage, mRgbFrameBitmap);
+
+                final Long timeStamp = System.currentTimeMillis();
+                ImageUtils.saveBitmap(mRgbFrameBitmap, "IMG_" + timeStamp.toString() + ".png");
+                showToast("Saved");
+                mComputingDetection = false;
+            }
+        });
+    }
+
+    /*
+    @Override
+    protected void processImage() {
+        ++mTimestamp;
+        final long currTimestamp = mTimestamp;
         byte[] originalLuminance = getLuminance();
 
         // No mutex needed as this method is not reentrant.
@@ -145,7 +218,9 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         mComputingDetection = true;
         LOGGER.i("Preparing image " + currTimestamp + " for detection in bg thread.");
 
-        mRgbFrameBitmap.setPixels(getRgbBytes(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
+        //mRgbFrameBitmap.setPixels(getRgbBytes(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
+
+        mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.mug);
         mRgbFrameBitmap = createSquaredBitmap(mRgbFrameBitmap);
 
         if (mLuminanceCopy == null) {
@@ -252,6 +327,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                     }
                 });
     }
+    */
 
     private void showToast(final String text) {
         this.runOnUiThread(
@@ -370,5 +446,4 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     public void onSetDebug(final boolean debug) {
         mDetector.enableStatLogging(debug);
     }
-
 }
