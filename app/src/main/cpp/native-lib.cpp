@@ -17,7 +17,7 @@ extern "C"
     }
 }
 
-void alphaBlendWithThreshold(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::Mat &result, float thresh)
+void alphaBlendWithMultiplier(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::Mat &result, float multiplier)
 {
 	for (int i = 0; i < result.rows; ++i)
 	{
@@ -29,8 +29,7 @@ void alphaBlendWithThreshold(cv::Mat &foreground, cv::Mat &background, cv::Mat &
 			auto resultPixel = result.data + i * result.step[0] + j * result.step[1];
 
 			auto val = (float)*alphaPtr;
-
-            val = val > thresh ? 1.0 : val;
+            val = min(val * multiplier, 1.0f);
 
 			for (int k = 0; k < result.channels(); ++k)
 			{
@@ -51,11 +50,11 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process
                                                                                  jint previewWidth,
                                                                                  jint previewHeight) {
 
-    const int erodeIter = 2;
+    const int erodeIter = 1;
     const int dilateIter = 1;
     const int elementSize = 40;
     const int erodeElementSize = 50;
-    const float thresh = 0.1;
+    const float multiplier = 4.0f;
 
     Mat &img = *(Mat *) matAddr;
     Mat &maskImg = *(Mat *) maskAddr;
@@ -100,7 +99,7 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process
 
     // Blur the background.
     cv::Mat imgBlur;
-    cv::blur(img, imgBlur, cv::Size(7, 7));
+    cv::blur(img, imgBlur, cv::Size(20, 20));
 
     // Do distance transform on the mask to get the amount for alpha blending.
     cv::Mat dist;
@@ -108,6 +107,6 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process
     cv::normalize(dist, dist, 0.0, 1.0, cv::NORM_MINMAX);
 
     // Alpha blend the foreground onto the blurred image.
-    alphaBlendWithThreshold(img, imgBlur, dist, result, thresh);
+    alphaBlendWithMultiplier(img, imgBlur, dist, result, multiplier);
 }
 }
