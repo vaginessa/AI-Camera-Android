@@ -217,7 +217,6 @@ public abstract class CameraActivity extends Activity
                         }
                     };
 
-            /*
             mPostInferenceCallback =
                     new Runnable() {
                         @Override
@@ -226,7 +225,6 @@ public abstract class CameraActivity extends Activity
                             mIsProcessingFrame = false;
                         }
                     };
-            */
 
             processImage();
         } catch (final Exception e) {
@@ -264,21 +262,6 @@ public abstract class CameraActivity extends Activity
     @Override
     public synchronized void onPause() {
         LOGGER.d("onPause " + this);
-
-        if (!isFinishing()) {
-            LOGGER.d("Requesting finish");
-            finish();
-        }
-
-        mHandlerThread.quitSafely();
-        try {
-            mHandlerThread.join();
-            mHandlerThread = null;
-            mHandler = null;
-        } catch (final InterruptedException e) {
-            LOGGER.e(e, "Exception!");
-        }
-
         super.onPause();
     }
 
@@ -291,6 +274,16 @@ public abstract class CameraActivity extends Activity
     @Override
     public synchronized void onDestroy() {
         LOGGER.d("onDestroy " + this);
+
+        mHandlerThread.quitSafely();
+        try {
+            mHandlerThread.join();
+            mHandlerThread = null;
+            mHandler = null;
+        } catch (final InterruptedException e) {
+            LOGGER.e(e, "Exception!");
+        }
+
         super.onDestroy();
     }
 

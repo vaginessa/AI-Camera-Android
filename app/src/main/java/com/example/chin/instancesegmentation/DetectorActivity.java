@@ -55,8 +55,6 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     private long mTimestamp = 0;
     private long mLastProcessingTimeMs;
 
-    private boolean mComputingDetection = false;
-
     private OverlayView mTrackingOverlay;
 
     public native void process(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
@@ -64,7 +62,9 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     @Override
     public void onPreviewSizeChosen(final Size size, final int rotation) {
         try {
-            mDetector = MaskRCNN.create(getAssets(), MODEL_FILE, LABELS_FILE);
+            if (mDetector == null) {
+                mDetector = MaskRCNN.create(getAssets(), MODEL_FILE, LABELS_FILE);
+            }
         } catch (final IOException e) {
             LOGGER.e("Exception initializing classifier!", e);
             Toast toast =
@@ -140,12 +140,6 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         ++mTimestamp;
         final long currTimestamp = mTimestamp;
 
-        if (mComputingDetection) {
-            readyForNextImage();
-            return;
-        }
-        mComputingDetection = true;
-
         // This is temporary for testing.
         //mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sana);
         //mPreviewHeight = mRgbFrameBitmap.getHeight();
@@ -161,6 +155,8 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
 
         final int cropSize = 300;
         mCroppedBitmap = Bitmap.createScaledBitmap(mCroppedBitmap, cropSize, cropSize, true);
+
+        readyForNextImage();
 
         // For examining the actual TF input.
         if (SAVE_PREVIEW_BITMAP) {
@@ -198,7 +194,6 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 final Long timeStamp = System.currentTimeMillis();
                 ImageUtils.saveBitmap(mRgbFrameBitmap, "IMG_" + timeStamp.toString() + ".png");
                 showToast("Saved");
-                mComputingDetection = false;
             }
         });
     }
