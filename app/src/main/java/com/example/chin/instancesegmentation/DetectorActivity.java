@@ -76,14 +76,12 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
 
         mPreviewWidth = size.getWidth();
         mPreviewHeight = size.getHeight();
-        int cropSize = mPreviewWidth > mPreviewHeight ? mPreviewWidth : mPreviewHeight;
 
         mSensorOrientation = rotation - getScreenOrientation();
         LOGGER.i("Camera orientation relative to screen canvas: %d", mSensorOrientation);
 
         LOGGER.i("Initializing at size %dx%d", mPreviewWidth, mPreviewHeight);
         mRgbFrameBitmap = Bitmap.createBitmap(mPreviewWidth, mPreviewHeight, Bitmap.Config.ARGB_8888);
-        mCroppedBitmap = Bitmap.createBitmap(cropSize, cropSize, Bitmap.Config.ARGB_8888);
 
         mFrameToCropTransform = new Matrix();
         mCropToFrameTransform = new Matrix();
@@ -148,10 +146,10 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         mRgbFrameBitmap.setPixels(
                 getRgbBytes(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
         // Rotate image to the correct orientation.
-        mRgbFrameBitmap = Bitmap.createBitmap(
+        final Bitmap rgbFrameBitmapRotated = Bitmap.createBitmap(
                 mRgbFrameBitmap, 0, 0, mPreviewWidth, mPreviewHeight, mFrameToCropTransform, true);
         // The MaskRCNN implementation expects a square image.
-        mCroppedBitmap = createSquaredBitmap(mRgbFrameBitmap);
+        mCroppedBitmap = createSquaredBitmap(rgbFrameBitmapRotated);
 
         final int cropSize = 300;
         mCroppedBitmap = Bitmap.createScaledBitmap(mCroppedBitmap, cropSize, cropSize, true);
@@ -177,7 +175,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 final int[] mask = result.getMask();
 
                 Mat img = new Mat();
-                Utils.bitmapToMat(mRgbFrameBitmap, img);
+                Utils.bitmapToMat(rgbFrameBitmapRotated, img);
                 Mat maskMat = new Mat(cropSize, cropSize, CvType.CV_32SC1);
                 Mat outImage = new Mat(img.size(), img.type());
                 maskMat.put(0, 0, mask);
@@ -186,13 +184,13 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 process(img.getNativeObjAddr(),
                         maskMat.getNativeObjAddr(),
                         outImage.getNativeObjAddr(),
-                        mRgbFrameBitmap.getWidth(),
-                        mRgbFrameBitmap.getHeight());
+                        rgbFrameBitmapRotated.getWidth(),
+                        rgbFrameBitmapRotated.getHeight());
 
-                Utils.matToBitmap(outImage, mRgbFrameBitmap);
+                Utils.matToBitmap(outImage, rgbFrameBitmapRotated);
 
                 final Long timeStamp = System.currentTimeMillis();
-                ImageUtils.saveBitmap(mRgbFrameBitmap, "IMG_" + timeStamp.toString() + ".png");
+                ImageUtils.saveBitmap(rgbFrameBitmapRotated, "IMG_" + timeStamp.toString() + ".png");
                 showToast("Saved");
             }
         });

@@ -422,20 +422,14 @@ public class CameraConnectionFragment extends Fragment {
                     characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
             // For still image captures, we use the largest available size.
-            final Size largest =
+            mPreviewSize =
                     Collections.max(
                             Arrays.asList(map.getOutputSizes(ImageFormat.YUV_420_888)),
                             new CompareSizesByArea());
 
-            mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+            LOGGER.i("Chosen size: " + mPreviewSize.getWidth() + "x" + mPreviewSize.getHeight());
 
-            // Danger, W.R.! Attempting to use too large a preview size could  exceed the camera
-            // bus' bandwidth limitation, resulting in gorgeous previews but the storage of
-            // garbage capture data.
-            mPreviewSize =
-                    chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
-                            mInputSize.getWidth(),
-                            mInputSize.getHeight());
+            mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
 
             // We fit the aspect ratio of TextureView to the size of preview we picked.
             final int orientation = getResources().getConfiguration().orientation;
