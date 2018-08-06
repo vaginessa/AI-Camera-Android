@@ -1,6 +1,7 @@
 package com.example.chin.instancesegmentation;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -13,6 +14,7 @@ import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicBlur;
 import android.renderscript.Type;
 import android.util.Size;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
@@ -29,64 +31,83 @@ import org.opencv.core.Mat;
 public class DetectorActivity extends CameraActivity implements ImageReader.OnImageAvailableListener {
     private static final Logger LOGGER = new Logger();
 
-    private static final String MODEL_FILE = "file:///android_asset/mask_rcnn_coco_mod.pb";
-    private static final String LABELS_FILE = "file:///android_asset/coco_labels_list.txt";
-
     private static final boolean SAVE_PREVIEW_BITMAP = false;
 
     // Minimum detection confidence to track a detection.
-    private static final float MINIMUM_CONFIDENCE = 0.9f;
+    private static final float MINIMUM_CONFIDENCE = 0.4f;
 
     private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
 
     private Classifier mDetector;
+    private Classifier mClassifier;
 
     private Integer mSensorOrientation;
+
+    private int mCropWidth;
+    private int mCropHeight;
 
     private Bitmap mRgbFrameBitmap = null;
     private Bitmap mCroppedBitmap = null;
     private Bitmap mCropCopyBitmap = null;
 
+    private Bitmap mRgbPreviewBitmap = null;
+    private Bitmap mCroppedPreviewBitmap = null;
+
     private byte[] mLuminanceCopy;
 
     private Matrix mFrameToCropTransform;
     private Matrix mCropToFrameTransform;
+    private Matrix mFrameToClassifyTransform;
 
     private long mTimestamp = 0;
     private long mLastProcessingTimeMs;
+    private boolean mComputingDetection = false;
+    private boolean mInitialised = false;
 
     private OverlayView mTrackingOverlay;
 
+    // These are for the real time classifier.
+    private static final int INPUT_SIZE = 224;
+    private static final int IMAGE_MEAN = 117;
+    private static final float IMAGE_STD = 1;
+    private static final String INPUT_NAME = "input";
+    private static final String OUTPUT_NAME = "output";
+
+    private static final String CLASSIFIER_MODEL_FILE =
+            "file:///android_asset/tensorflow_inception_graph.pb";
+    private static final String CLASSIFIER_LABELS_FILE =
+            "file:///android_asset/imagenet_comp_graph_label_strings.txt";
+
+    // DeepLab Config
+    private static final String DEEPLAB_MODEL_FILE =
+            "file:///android_asset/deeplabv3_mobilenetv2_pascal_mod.pb";
+    private static final int DEEPLAB_IMAGE_SIZE = 513;
+
     public native void process(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
+    public native void bokeh(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
+
 
     @Override
     public void onPreviewSizeChosen(final Size size, final int rotation) {
-        try {
-            if (mDetector == null) {
-                mDetector = MaskRCNN.create(getAssets(), MODEL_FILE, LABELS_FILE);
-            }
-        } catch (final IOException e) {
-            LOGGER.e("Exception initializing classifier!", e);
-            Toast toast =
-                    Toast.makeText(
-                            getApplicationContext(), "Classifier could not be initialized", Toast.LENGTH_SHORT);
-            toast.show();
-            finish();
+        if (!mInitialised) {
+            initialiseDetectors();
         }
 
         mPreviewWidth = size.getWidth();
         mPreviewHeight = size.getHeight();
 
         mSensorOrientation = rotation - getScreenOrientation();
+
         LOGGER.i("Camera orientation relative to screen canvas: %d", mSensorOrientation);
-
         LOGGER.i("Initializing at size %dx%d", mPreviewWidth, mPreviewHeight);
-        mRgbFrameBitmap = Bitmap.createBitmap(mPreviewWidth, mPreviewHeight, Bitmap.Config.ARGB_8888);
 
-        mFrameToCropTransform = new Matrix();
-        mCropToFrameTransform = new Matrix();
-        mFrameToCropTransform.postRotate(mSensorOrientation);
-        mFrameToCropTransform.invert(mCropToFrameTransform);
+        mRgbPreviewBitmap = Bitmap.createBitmap(mPreviewWidth, mPreviewHeight, Bitmap.Config.ARGB_8888);
+        mCroppedPreviewBitmap = Bitmap.createBitmap(INPUT_SIZE, INPUT_SIZE, Bitmap.Config.ARGB_8888);
+
+        mFrameToClassifyTransform = ImageUtils.getTransformationMatrix(
+                mPreviewWidth, mPreviewHeight,
+                INPUT_SIZE, INPUT_SIZE,
+                mSensorOrientation, true);
 
         mTrackingOverlay = findViewById(R.id.tracking_overlay);
         mTrackingOverlay.addCallback(
@@ -134,193 +155,167 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     }
 
     @Override
-    protected void processImage() {
-        ++mTimestamp;
-        final long currTimestamp = mTimestamp;
+    public void onPictureSizeChosen(final Size size, final int rotation) {
+        mPictureWidth = size.getWidth();
+        mPictureHeight = size.getHeight();
 
-        // This is temporary for testing.
-        //mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sana);
-        //mPreviewHeight = mRgbFrameBitmap.getHeight();
-        //mPreviewWidth = mRgbFrameBitmap.getWidth();
+        mRgbFrameBitmap = Bitmap.createBitmap(mPictureWidth, mPictureHeight, Bitmap.Config.ARGB_8888);
 
-        mRgbFrameBitmap.setPixels(
-                getRgbBytes(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
-        // Rotate image to the correct orientation.
-        final Bitmap rgbFrameBitmapRotated = Bitmap.createBitmap(
-                mRgbFrameBitmap, 0, 0, mPreviewWidth, mPreviewHeight, mFrameToCropTransform, true);
-        // The MaskRCNN implementation expects a square image.
-        mCroppedBitmap = createSquaredBitmap(rgbFrameBitmapRotated);
+        mCropToFrameTransform = new Matrix();
+        mFrameToCropTransform = ImageUtils.getTransformationMatrix(
+                mPictureWidth, mPictureHeight,
+                mPictureWidth, mPictureHeight,
+                mSensorOrientation, true);
 
-        final int cropSize = 300;
-        mCroppedBitmap = Bitmap.createScaledBitmap(mCroppedBitmap, cropSize, cropSize, true);
+        mFrameToCropTransform.invert(mCropToFrameTransform);
+    }
 
-        readyForNextImage();
+    private void initialiseDetectors() {
+        try {
+            if (mDetector == null) {
+                mDetector = DeepLab.Create(getAssets(), DEEPLAB_MODEL_FILE, "");
+            }
 
-        // For examining the actual TF input.
-        if (SAVE_PREVIEW_BITMAP) {
-            ImageUtils.saveBitmap(mCroppedBitmap);
+            if (mClassifier == null) {
+                mClassifier =
+                        TensorFlowImageClassifier.create(
+                                getAssets(),
+                                CLASSIFIER_MODEL_FILE,
+                                CLASSIFIER_LABELS_FILE,
+                                INPUT_SIZE,
+                                IMAGE_MEAN,
+                                IMAGE_STD,
+                                INPUT_NAME,
+                                OUTPUT_NAME);
+            }
+
+            mInitialised = true;
+        } catch (final IOException e) {
+            LOGGER.e("Exception initializing classifier!", e);
+            Toast toast =
+                    Toast.makeText(
+                            getApplicationContext(),
+                            "Classifier could not be initialized",
+                            Toast.LENGTH_SHORT);
+            toast.show();
+            finish();
         }
+    }
+
+    protected void processPreview() {
+        mRgbPreviewBitmap.setPixels(
+                getRgbBytesPreview(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
+
+        final Canvas canvas = new Canvas(mCroppedPreviewBitmap);
+        canvas.drawBitmap(mRgbPreviewBitmap, mFrameToClassifyTransform, null);
 
         runInBackground(new Runnable() {
             @Override
             public void run() {
-                LOGGER.i("Running detection on image " + currTimestamp);
-                final List<Classifier.Recognition> results = mDetector.recognizeImage(mCroppedBitmap);
-
-                if (results.size() == 0)
-                    return;
-
-                // Just take the first object recognised for now.
-                final Classifier.Recognition result = results.get(0);
-                final int[] mask = result.getMask();
-
-                Mat img = new Mat();
-                Utils.bitmapToMat(rgbFrameBitmapRotated, img);
-                Mat maskMat = new Mat(cropSize, cropSize, CvType.CV_32SC1);
-                Mat outImage = new Mat(img.size(), img.type());
-                maskMat.put(0, 0, mask);
-
-                // Refine mask and blur background.
-                process(img.getNativeObjAddr(),
-                        maskMat.getNativeObjAddr(),
-                        outImage.getNativeObjAddr(),
-                        rgbFrameBitmapRotated.getWidth(),
-                        rgbFrameBitmapRotated.getHeight());
-
-                Utils.matToBitmap(outImage, rgbFrameBitmapRotated);
-
-                final Long timeStamp = System.currentTimeMillis();
-                ImageUtils.saveBitmap(rgbFrameBitmapRotated, "IMG_" + timeStamp.toString() + ".png");
-                showToast("Saved");
+                final List<Classifier.Recognition> results = mClassifier.recognizeImage(mCroppedPreviewBitmap);
+                if (results.size() > 0) {
+                    final Classifier.Recognition result = results.get(0);
+                    //LOGGER.i("Detected " + result.getTitle() + " with confidence " + result.getConfidence());
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                TextView textView = findViewById(R.id.label);
+                                if (result.getConfidence() >= MINIMUM_CONFIDENCE) {
+                                    textView.setText(result.getTitle());
+                                } else {
+                                    textView.setText("");
+                                }
+                            }
+                        });
+                }
+                readyForNextPreviewImage();
             }
         });
     }
 
-    /*
     @Override
     protected void processImage() {
-        ++mTimestamp;
-        final long currTimestamp = mTimestamp;
-        byte[] originalLuminance = getLuminance();
+        LOGGER.i("Process still");
 
-        // No mutex needed as this method is not reentrant.
-        if (mComputingDetection) {
-            readyForNextImage();
-            return;
-        }
-        mComputingDetection = true;
-        LOGGER.i("Preparing image " + currTimestamp + " for detection in bg thread.");
+        /*
+        mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sana_r);
+        mPictureHeight = mRgbFrameBitmap.getHeight();
+        mPictureWidth = mRgbFrameBitmap.getWidth();
+        */
 
-        //mRgbFrameBitmap.setPixels(getRgbBytes(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inMutable = true;
+        mRgbFrameBitmap = BitmapFactory.decodeByteArray(mPictureBytes, 0, mPictureBytes.length, options);
 
-        mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.mug);
-        mRgbFrameBitmap = createSquaredBitmap(mRgbFrameBitmap);
+        long start = System.nanoTime();
 
-        if (mLuminanceCopy == null) {
-            mLuminanceCopy = new byte[originalLuminance.length];
-        }
-        System.arraycopy(originalLuminance, 0, mLuminanceCopy, 0, originalLuminance.length);
+        // Rotate image to the correct orientation.
+        final Bitmap rgbFrameBitmapRotated = Bitmap.createBitmap(
+                mRgbFrameBitmap, 0, 0, mRgbFrameBitmap.getWidth(), mRgbFrameBitmap.getHeight(), mFrameToCropTransform, true);
+
+        final int w = rgbFrameBitmapRotated.getWidth();
+        final int h = rgbFrameBitmapRotated.getHeight();
+
+        // DeepLab requires the image to be resized.
+        final float scaleFactor = (float)DEEPLAB_IMAGE_SIZE / Math.max(w, h);
+        mCropWidth = Math.round(scaleFactor * w);
+        mCropHeight = Math.round(scaleFactor * h);
+
+        mCroppedBitmap =
+                Bitmap.createScaledBitmap(rgbFrameBitmapRotated, mCropWidth, mCropHeight, true);
+
         readyForNextImage();
 
-        int cropSize = mRgbFrameBitmap.getWidth();
-        mCroppedBitmap = Bitmap.createBitmap(mRgbFrameBitmap, 0, 0, cropSize, cropSize, mFrameToCropTransform, true);
+        final long mid1 = System.nanoTime();
+        long dur1 = (mid1 - start) / 1000000 ;
+        LOGGER.i("Preparing bitmap took " + dur1 + " ms");
 
-        // For examining the actual TF input.
-        if (SAVE_PREVIEW_BITMAP) {
-            ImageUtils.saveBitmap(mCroppedBitmap);
-        }
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                final List<Classifier.Recognition> results = mDetector.recognizeImage(mCroppedBitmap);
 
-        runInBackground(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        LOGGER.i("Running detection on image " + currTimestamp);
-                        final long startTime = SystemClock.uptimeMillis();
-                        final List<Classifier.Recognition> results = mDetector.recognizeImage(mCroppedBitmap);
-                        mLastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
+                long mid2 = System.nanoTime();
+                long dur2 = (mid2 - mid1) /1000000 ;
+                LOGGER.i("Detection took " + dur2 + " ms");
 
-                        // This is for drawing bounding boxes on the cropped bitmap for debugging.
-                        mCropCopyBitmap = Bitmap.createBitmap(mCroppedBitmap);
-                        final Canvas canvas = new Canvas(mCropCopyBitmap);
+                if (results.size() == 0)
+                    return;
 
-                        // This is for drawing bounding boxes on the un-cropped bitmap.
-                        final Canvas canvas2 = new Canvas(mRgbFrameBitmap);
+                Classifier.Recognition result = results.get(0);
+                int[] mask = result.getMask();
 
-                        final Paint paint = new Paint();
-                        paint.setColor(Color.RED);
-                        paint.setStyle(Paint.Style.STROKE);
-                        paint.setStrokeWidth(2.0f);
+                Mat img = new Mat();
+                Utils.bitmapToMat(rgbFrameBitmapRotated, img);
+                Mat maskMat = new Mat(mCropHeight, mCropWidth, CvType.CV_32SC1);
+                Mat outImage = new Mat(img.size(), img.type());
+                maskMat.put(0, 0, mask);
 
-                        final List<RectF> locations = new ArrayList<>();
+                // Add bokeh effect.
+                bokeh(img.getNativeObjAddr(),
+                        maskMat.getNativeObjAddr(),
+                        outImage.getNativeObjAddr(),
+                        w,
+                        h);
 
-                        for (final Classifier.Recognition result : results) {
-                            if (result.getConfidence() >= MINIMUM_CONFIDENCE) {
-                                final RectF location = result.getLocation();
+                Utils.matToBitmap(outImage, rgbFrameBitmapRotated);
 
-                                if (location != null) {
-                                    // Transform the bounding box to frame coordinates.
-                                    //mCropToFrameTransform.mapRect(location);
-                                    //canvas2.drawRect(location, paint);
-                                    locations.add(location);
-                                }
-                            }
-                        }
+                long mid3 = System.nanoTime();
+                long dur3 = (mid3 - mid2) / 1000000;
+                LOGGER.i("Post processing took " + dur3 + " ms");
 
-                        Bitmap rgbFrameBitmapCopy = Bitmap.createBitmap(mRgbFrameBitmap);
+                final Long timeStamp = System.currentTimeMillis();
+                ImageUtils.saveBitmap(rgbFrameBitmapRotated, "IMG_" + timeStamp.toString() + ".png");
+                showToast("Saved");
 
-                        for (final Classifier.Recognition result : results) {
-                            if (result.getConfidence() >= MINIMUM_CONFIDENCE) {
-                                final RectF currentLocation = result.getLocation();
-                                final int[] mask = result.getMask();
-                                //float[] vec = pointsToVector(mask);
-                                //mCropToFrameTransform.mapPoints(vec);
-                                //int[] transformedMask = vecToPoints(vec, mPreviewWidth, mPreviewHeight);
+                long mid4 = System.nanoTime();
+                long dur4 = (mid4 - mid3) / 1000000;
+                LOGGER.i("Saving to file took " + dur4 + " ms");
 
-                                // TODO: Make this into a function in ImageUtils.
-                                for (int i = 0; i < mRgbFrameBitmap.getWidth(); ++i) {
-                                    for (int j = 0; j < mRgbFrameBitmap.getHeight(); ++j) {
-                                        boolean inside = false;
-                                        for (final RectF location : locations) {
-                                            inside |= location.contains(i, j);
-                                        }
-
-                                        if (!inside) {
-                                            mRgbFrameBitmap.setPixel(i, j, Color.TRANSPARENT);
-                                        }
-
-                                        if (currentLocation.contains(i, j)) {
-                                            int activate = mask[j * mRgbFrameBitmap.getHeight() + i];
-                                            if (activate == 0) {
-                                                mRgbFrameBitmap.setPixel(i, j, Color.TRANSPARENT);
-                                            }
-                                        }
-                                    }
-                                }
-                                break;
-                            }
-                        }
-
-                        rgbFrameBitmapCopy = blur(rgbFrameBitmapCopy, 7);
-                        overlay(rgbFrameBitmapCopy, mRgbFrameBitmap);
-
-                        Bitmap result = Bitmap.createBitmap(rgbFrameBitmapCopy,
-                                rgbFrameBitmapCopy.getWidth() - mPreviewHeight + 5,
-                                0,
-                                mPreviewHeight - 5,
-                                mPreviewWidth);
-
-                        Long timeStamp = System.currentTimeMillis();
-
-                        ImageUtils.saveBitmap(result, "IMG_" + timeStamp.toString() + ".png");
-                        showToast("Saved");
-
-                        mTrackingOverlay.postInvalidate();
-                        requestRender();
-                        mComputingDetection = false;
-                    }
-                });
+                mComputingDetection = false;
+            }
+        });
     }
-    */
 
     private void showToast(final String text) {
         this.runOnUiThread(
@@ -330,99 +325,6 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                         Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
                     }
                 });
-    }
-
-    private static Bitmap createSquaredBitmap(Bitmap srcBmp) {
-        int dim = Math.max(srcBmp.getWidth(), srcBmp.getHeight());
-        Bitmap dstBmp = Bitmap.createBitmap(dim, dim, Bitmap.Config.ARGB_8888);
-
-        Canvas canvas = new Canvas(dstBmp);
-        canvas.drawColor(Color.WHITE);
-        canvas.drawBitmap(srcBmp, 0, 0, null);
-
-        return dstBmp;
-    }
-
-    private void overlay(Bitmap bitmap, Bitmap overlay) {
-        Canvas canvas = new Canvas(bitmap);
-        Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
-        canvas.drawBitmap(overlay, 0, 0, paint);
-    }
-
-    private Bitmap blur(Bitmap bitmap, float radius) {
-        RenderScript rs = RenderScript.create(this);
-
-        //Create allocation from Bitmap
-        Allocation allocation = Allocation.createFromBitmap(rs, bitmap);
-
-        Type t = allocation.getType();
-
-        //Create allocation with the same type
-        Allocation blurredAllocation = Allocation.createTyped(rs, t);
-
-        //Create script
-        ScriptIntrinsicBlur blurScript = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs));
-        //Set blur radius (maximum 25.0)
-        blurScript.setRadius(radius);
-        //Set input for script
-        blurScript.setInput(allocation);
-        //Call script for output allocation
-        blurScript.forEach(blurredAllocation);
-
-        //Copy script result into bitmap
-        blurredAllocation.copyTo(bitmap);
-
-        //Destroy everything to free memory
-        allocation.destroy();
-        blurredAllocation.destroy();
-        blurScript.destroy();
-        //t.destroy();
-        rs.destroy();
-
-        return bitmap;
-    }
-
-    private int turnGrayScale(int pixel) {
-        int r = Color.red(pixel);
-        int g = Color.green(pixel);
-        int b = Color.blue(pixel);
-
-        int average = (r + g + b) / 3;
-        return Color.rgb(average, average, average);
-    }
-
-    private float[] pointsToVector(int[] points) {
-        int size = (int)Math.sqrt(points.length);
-        List<Float> vec = new ArrayList<Float>();
-
-        for (int i = 0; i < size; ++i) {
-            for (int j = 0; j < size; ++j) {
-                if (points[j * size + i] == 1) {
-                    vec.add((float)i);
-                    vec.add((float)j);
-                }
-            }
-        }
-
-        float[] result = new float[vec.size()];
-        int i = 0;
-        for (Float v : vec) {
-            result[i++] = v;
-        }
-
-        return result;
-    }
-
-    private int[] vecToPoints(float[] vec, int width, int height) {
-        int[] result = new int[width * height];
-        for (int i = 0; i < vec.length; i += 2) {
-            int x = (int)vec[i];
-            int y = (int)vec[i + 1];
-
-            result[y * height + x] = 1;
-        }
-
-        return result;
     }
 
     @Override

@@ -7,6 +7,7 @@ import android.app.DialogFragment;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
@@ -38,6 +39,7 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import java.io.File;
@@ -272,10 +274,12 @@ public class CameraConnectionFragment extends Fragment {
     private CameraConnectionFragment(
             final ConnectionCallback connectionCallback,
             final OnImageAvailableListener mImageListener,
+            final OnImageAvailableListener mPreviewImageListener,
             final int layout,
             final Size mInputSize) {
         this.mCameraConnectionCallback = connectionCallback;
         this.mImageListener = mImageListener;
+        this.mPreviewImageListener = mPreviewImageListener;
         this.mLayout = layout;
         this.mInputSize = mInputSize;
     }
@@ -348,12 +352,18 @@ public class CameraConnectionFragment extends Fragment {
         }
     }
 
+    public static Size chooseLargestSize(final Size[] choices) {
+        return Collections.max(Arrays.asList(choices), new CompareSizesByArea());
+    }
+
     public static CameraConnectionFragment newInstance(
             final ConnectionCallback callback,
             final OnImageAvailableListener imageListener,
+            final OnImageAvailableListener previewImageListener,
             final int layout,
             final Size inputSize) {
-        return new CameraConnectionFragment(callback, imageListener, layout, inputSize);
+        return new CameraConnectionFragment(
+                callback, imageListener, previewImageListener, layout, inputSize);
     }
 
     @Override
@@ -368,6 +378,16 @@ public class CameraConnectionFragment extends Fragment {
                 takePicture();
             }
         });
+
+        ImageButton galleryButton = view.findViewById(R.id.goto_gallery);
+        galleryButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getActivity(), GalleryActivity.class);
+                startActivity(intent);
+            }
+        });
+
         return view;
     }
 
@@ -499,6 +519,11 @@ public class CameraConnectionFragment extends Fragment {
                 mPreviewReader.close();
                 mPreviewReader = null;
             }
+
+            if (null != mImageReader) {
+                mImageReader.close();
+                mImageReader = null;
+            }
         } catch (final InterruptedException e) {
             throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
         } finally {
@@ -595,6 +620,8 @@ public class CameraConnectionFragment extends Fragment {
                 }
             };
 
+    private OnImageAvailableListener mPreviewImageListener;
+
     /**
      * Creates a new {@link CameraCaptureSession} for camera preview.
      */
@@ -615,12 +642,18 @@ public class CameraConnectionFragment extends Fragment {
 
             LOGGER.i("Opening camera preview: " + mPreviewSize.getWidth() + "x" + mPreviewSize.getHeight());
 
-            mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(), // ImageFormat.JPEG, 2);
+            mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(),
                     ImageFormat.YUV_420_888, 2);
+
+            mPreviewReader = ImageReader.newInstance(mPreviewSize.getWidth(), mPreviewSize.getHeight(),
+                    ImageFormat.YUV_420_888, 2);
+
+            mPreviewReader.setOnImageAvailableListener(mPreviewImageListener, mBackgroundHandler);
+            mPreviewRequestBuilder.addTarget(mPreviewReader.getSurface());
 
             // Here, we create a CameraCaptureSession for camera preview.
             mCameraDevice.createCaptureSession(
-                    Arrays.asList(surface, mImageReader.getSurface()),
+                    Arrays.asList(surface, mImageReader.getSurface(), mPreviewReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
 
                         @Override
@@ -825,6 +858,8 @@ public class CameraConnectionFragment extends Fragment {
             mCaptureSession.abortCaptures();
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }

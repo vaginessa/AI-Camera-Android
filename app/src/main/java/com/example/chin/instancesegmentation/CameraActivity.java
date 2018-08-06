@@ -20,6 +20,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
@@ -38,7 +39,9 @@ import android.os.Trace;
 import android.util.Size;
 import android.view.KeyEvent;
 import android.view.Surface;
+import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.Toast;
 import java.nio.ByteBuffer;
 import com.example.chin.instancesegmentation.env.Logger;
@@ -63,15 +66,21 @@ public abstract class CameraActivity extends Activity
     private HandlerThread mHandlerThread;
     private boolean mUseCamera2API;
     private boolean mIsProcessingFrame = false;
+    private boolean mIsProcessingPreviewFrame = false;
     private byte[][] mYuvBytes = new byte[3][];
     private int[] mRgbBytes = null;
+    private int[] mRgbBytesPreview = null;
     private int mYRowStride;
 
     protected int mPreviewWidth = 0;
     protected int mPreviewHeight = 0;
+    protected int mPictureWidth = 0;
+    protected int mPictureHeight = 0;
 
     private Runnable mPostInferenceCallback;
+    private Runnable mPostPreviewInferenceCallback;
     private Runnable mImageConverter;
+    private Runnable mPreviewImageConverter;
 
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -113,6 +122,11 @@ public abstract class CameraActivity extends Activity
         return mRgbBytes;
     }
 
+    protected int[] getRgbBytesPreview() {
+        mPreviewImageConverter.run();
+        return mRgbBytesPreview;
+    }
+
     protected int getLuminanceStride() {
         return mYRowStride;
     }
@@ -126,11 +140,101 @@ public abstract class CameraActivity extends Activity
      */
     @Override
     public void onPreviewFrame(final byte[] bytes, final Camera camera) {
-        if (mIsProcessingFrame) {
+        if (mIsProcessingPreviewFrame) {
             LOGGER.w("Dropping frame!");
             return;
         }
 
+        mIsProcessingPreviewFrame = true;
+
+        try {
+            // Initialize the storage bitmaps once when the resolution is known.
+            if (mRgbBytesPreview == null) {
+                Camera.Size previewSize = camera.getParameters().getPreviewSize();
+                mPreviewHeight = previewSize.height;
+                mPreviewWidth = previewSize.width;
+                mRgbBytesPreview = new int[mPreviewWidth * mPreviewHeight];
+                onPreviewSizeChosen(new Size(previewSize.width, previewSize.height), 90);
+            }
+        } catch (final Exception e) {
+            LOGGER.e(e, "Exception!");
+            return;
+        }
+
+        mPreviewImageConverter =
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        ImageUtils.convertYUV420SPToARGB8888(bytes,
+                                mPreviewWidth,
+                                mPreviewHeight,
+                                mRgbBytesPreview);
+                    }
+                };
+
+        mPostPreviewInferenceCallback =
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        camera.addCallbackBuffer(bytes);
+                        mIsProcessingPreviewFrame = false;
+                    }
+                };
+
+        processPreview();
+    }
+
+    public byte[] mPictureBytes;
+
+    public void onCaptureStillFrame(final byte[] bytes, final Camera camera) {
+        if (mIsProcessingFrame) {
+            return;
+        }
+
+        mIsProcessingFrame = true;
+
+        try {
+            // Initialize the storage bitmaps once when the resolution is known.
+            if (mRgbBytes == null) {
+                Camera.Size pictureSize = camera.getParameters().getPictureSize();
+                mPictureHeight = pictureSize.height;
+                mPictureWidth = pictureSize.width;
+                mRgbBytes = new int[mPictureWidth * mPictureHeight];
+                onPictureSizeChosen(new Size(pictureSize.width, pictureSize.height), 90);
+            }
+        } catch (final Exception e) {
+            LOGGER.e(e, "Exception!");
+            return;
+        }
+
+        mPictureBytes = bytes;
+
+        /*
+        mImageConverter =
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        ImageUtils.convertYUV420SPToARGB8888(bytes,
+                                mPictureWidth,
+                                mPictureHeight,
+                                mRgbBytes);
+                    }
+                };
+                */
+
+        mPostInferenceCallback =
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        camera.addCallbackBuffer(bytes);
+                        mIsProcessingFrame = false;
+                    }
+                };
+
+        processImage();
+    }
+
+    private void setupImageConverter(final byte[] bytes, final Camera camera) {
         try {
             // Initialize the storage bitmaps once when the resolution is known.
             if (mRgbBytes == null) {
@@ -145,7 +249,6 @@ public abstract class CameraActivity extends Activity
             return;
         }
 
-        mIsProcessingFrame = true;
         lastPreviewFrame = bytes;
         mYuvBytes[0] = bytes;
         mYRowStride = mPreviewWidth;
@@ -154,21 +257,12 @@ public abstract class CameraActivity extends Activity
                 new Runnable() {
                     @Override
                     public void run() {
-                        ImageUtils.convertYUV420SPToARGB8888(bytes, mPreviewWidth, mPreviewHeight, mRgbBytes);
+                        ImageUtils.convertYUV420SPToARGB8888(bytes,
+                                mPreviewWidth,
+                                mPreviewHeight,
+                                mRgbBytes);
                     }
                 };
-
-        mPostInferenceCallback =
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        camera.addCallbackBuffer(bytes);
-                        mIsProcessingFrame = false;
-                    }
-                };
-
-        // If we want to run detector in real time we do it here.
-        //processImage();
     }
 
     @Override
@@ -177,9 +271,6 @@ public abstract class CameraActivity extends Activity
         //We need wait until we have some size from onPreviewSizeChosen
         if (mPreviewWidth == 0 || mPreviewHeight == 0) {
             return;
-        }
-        if (mRgbBytes == null) {
-            mRgbBytes = new int[mPreviewWidth * mPreviewHeight];
         }
         try {
             final Image image = reader.acquireLatestImage();
@@ -194,28 +285,8 @@ public abstract class CameraActivity extends Activity
             }
             mIsProcessingFrame = true;
             Trace.beginSection("imageAvailable");
-            final Plane[] planes = image.getPlanes();
-            fillBytes(planes, mYuvBytes);
-            mYRowStride = planes[0].getRowStride();
-            final int uvRowStride = planes[1].getRowStride();
-            final int uvPixelStride = planes[1].getPixelStride();
 
-            mImageConverter =
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            ImageUtils.convertYUV420ToARGB8888(
-                                    mYuvBytes[0],
-                                    mYuvBytes[1],
-                                    mYuvBytes[2],
-                                    mPreviewWidth,
-                                    mPreviewHeight,
-                                    mYRowStride,
-                                    uvRowStride,
-                                    uvPixelStride,
-                                    mRgbBytes);
-                        }
-                    };
+            setupImageConverter(image);
 
             mPostInferenceCallback =
                     new Runnable() {
@@ -227,6 +298,77 @@ public abstract class CameraActivity extends Activity
                     };
 
             processImage();
+        } catch (final Exception e) {
+            LOGGER.e(e, "Exception!");
+            Trace.endSection();
+            return;
+        }
+        Trace.endSection();
+    }
+
+    private void setupImageConverter(Image image) {
+        if (mRgbBytes == null) {
+            mRgbBytes = new int[mPreviewWidth * mPreviewHeight];
+        }
+
+        final Plane[] planes = image.getPlanes();
+        fillBytes(planes, mYuvBytes);
+        mYRowStride = planes[0].getRowStride();
+        final int uvRowStride = planes[1].getRowStride();
+        final int uvPixelStride = planes[1].getPixelStride();
+
+        mImageConverter =
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        ImageUtils.convertYUV420ToARGB8888(
+                                mYuvBytes[0],
+                                mYuvBytes[1],
+                                mYuvBytes[2],
+                                mPreviewWidth,
+                                mPreviewHeight,
+                                mYRowStride,
+                                uvRowStride,
+                                uvPixelStride,
+                                mRgbBytes);
+                    }
+                };
+    }
+
+    private void onPreviewImageAvailable(final ImageReader reader) {
+        LOGGER.i("onPreviewImageAvailable");
+        //We need wait until we have some size from onPreviewSizeChosen
+        if (mPreviewWidth == 0 || mPreviewHeight == 0) {
+            return;
+        }
+        try {
+            final Image image = reader.acquireLatestImage();
+
+            if (image == null) {
+                LOGGER.i("image null");
+                return;
+            }
+
+            if (mIsProcessingPreviewFrame) {
+                LOGGER.i("processing preview true");
+                image.close();
+                return;
+            }
+            mIsProcessingPreviewFrame  = true;
+            Trace.beginSection("imageAvailable");
+
+            setupImageConverter(image);
+
+            mPostPreviewInferenceCallback =
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            image.close();
+                            mIsProcessingPreviewFrame = false;
+                        }
+                    };
+
+            processPreview();
         } catch (final Exception e) {
             LOGGER.e(e, "Exception!");
             Trace.endSection();
@@ -381,22 +523,43 @@ public abstract class CameraActivity extends Activity
         }
 
         Fragment fragment;
-        CameraConnectionFragment camera2Fragment =
-                CameraConnectionFragment.newInstance(
-                        new CameraConnectionFragment.ConnectionCallback() {
-                            @Override
-                            public void onPreviewSizeChosen(final Size size, final int rotation) {
-                                mPreviewHeight = size.getHeight();
-                                mPreviewWidth = size.getWidth();
-                                CameraActivity.this.onPreviewSizeChosen(size, rotation);
-                            }
-                        },
-                        this,
-                        getLayoutId(),
-                        getDesiredPreviewFrameSize());
+        if (mUseCamera2API) {
+            LOGGER.i("Using Camera2 API");
+            CameraConnectionFragment camera2Fragment =
+                    CameraConnectionFragment.newInstance(
+                            new CameraConnectionFragment.ConnectionCallback() {
+                                @Override
+                                public void onPreviewSizeChosen(final Size size, final int rotation) {
+                                    mPreviewHeight = size.getHeight();
+                                    mPreviewWidth = size.getWidth();
+                                    CameraActivity.this.onPreviewSizeChosen(size, rotation);
+                                }
+                            },
+                            this,
+                            new OnImageAvailableListener() {
+                                @Override
+                                public void onImageAvailable(ImageReader reader) {
+                                    onPreviewImageAvailable(reader);
+                                }
+                            },
+                            getLayoutId(),
+                            getDesiredPreviewFrameSize());
 
-        camera2Fragment.setCamera(cameraId);
-        fragment = camera2Fragment;
+            camera2Fragment.setCamera(cameraId);
+            fragment = camera2Fragment;
+        } else {
+            LOGGER.i("Using Camera API");
+            fragment = new LegacyCameraConnectionFragment(
+                            new Camera.PreviewCallback() {
+                                @Override
+                                public void onPreviewFrame(final byte[] data, final Camera camera) {
+                                    onCaptureStillFrame(data, camera);
+                                }
+                            },
+                    this,
+                            getLayoutId(),
+                            getDesiredPreviewFrameSize());
+        }
 
         getFragmentManager()
                 .beginTransaction()
@@ -455,6 +618,12 @@ public abstract class CameraActivity extends Activity
         }
     }
 
+    protected void readyForNextPreviewImage() {
+        if (mPostPreviewInferenceCallback != null) {
+            mPostPreviewInferenceCallback.run();
+        }
+    }
+
     protected int getScreenOrientation() {
         switch (getWindowManager().getDefaultDisplay().getRotation()) {
             case Surface.ROTATION_270:
@@ -469,7 +638,9 @@ public abstract class CameraActivity extends Activity
     }
 
     protected abstract void processImage();
+    protected abstract void processPreview();
     protected abstract void onPreviewSizeChosen(final Size size, final int rotation);
+    protected abstract void onPictureSizeChosen(final Size size, final int rotation);
     protected abstract int getLayoutId();
     protected abstract Size getDesiredPreviewFrameSize();
 }
