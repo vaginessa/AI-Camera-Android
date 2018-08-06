@@ -63,6 +63,9 @@ def nativeBuildSystem = 'none'
 allprojects {
     repositories {
         jcenter()
+        maven {
+            url "https://jitpack.io"
+        }
     }
 }
 
@@ -79,4 +82,6 @@ dependencies {
     if (nativeBuildSystem == 'cmake' || nativeBuildSystem == 'none') {
         compile 'org.tensorflow:tensorflow-android:+'
     }
+    compile 'com.github.chrisbanes:PhotoView:2.1.4'
+    compile 'com.android.support:recyclerview-v7:27.0.2'
 }
