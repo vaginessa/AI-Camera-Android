@@ -19,25 +19,44 @@ extern "C"
 
 void alphaBlendWithMultiplier(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::Mat &result, float multiplier)
 {
-	for (int i = 0; i < result.rows; ++i)
-	{
-		for (int j = 0; j < result.cols; ++j)
-		{
-			auto fgPixel = foreground.data + i * foreground.step[0] + j * foreground.step[1];
-			auto bgPixel = background.data + i * background.step[0] + j * background.step[1];
-			auto alphaPtr = reinterpret_cast<float*>(alpha.data + i * alpha.step[0] + j * alpha.step[1]);
-			auto resultPixel = result.data + i * result.step[0] + j * result.step[1];
+    int nRows = result.rows;
+    int nCols = result.cols * result.channels();
 
-			auto val = (float)*alphaPtr;
-            val = min(val * multiplier, 1.0f);
+    if (result.isContinuous() &&
+        foreground.isContinuous() &&
+        background.isContinuous() &&
+        alpha.isContinuous())
+    {
+        nCols *= nRows;
+        nRows = 1;
+    }
 
-			for (int k = 0; k < result.channels(); ++k)
-			{
-				resultPixel[k] = val * fgPixel[k] + (1.0 - val) * bgPixel[k];
-			}
+    const uchar *fptr;
+    const uchar *bptr;
+    const float *aptr;
+    uchar *rptr;
 
-		}
-	}
+    for (auto i = 0; i < nRows; ++i)
+    {
+        fptr = foreground.ptr<uchar>(i);
+        bptr = background.ptr<uchar>(i);
+        aptr = alpha.ptr<float>(i);
+        rptr = result.ptr<uchar>(i);
+
+        auto val = 0.0f;
+
+        for (auto j = 0; j < nCols; ++j, fptr++, bptr++, rptr++)
+        {
+            if (j % 3 == 0)
+            {
+                val = *aptr;
+                val = min(val * multiplier, 1.0f);
+                aptr++;
+            }
+
+            *rptr = val * (*fptr) + (1.0f - val) * (*bptr);
+        }
+    }
 }
 
 extern "C"
@@ -107,6 +126,41 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process
     cv::normalize(dist, dist, 0.0, 1.0, cv::NORM_MINMAX);
 
     // Alpha blend the foreground onto the blurred image.
+    alphaBlendWithMultiplier(img, imgBlur, dist, result, multiplier);
+}
+}
+
+extern "C"
+{
+void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_bokeh(JNIEnv *env,
+                                                                               jobject instance,
+                                                                               jlong matAddr,
+                                                                               jlong maskAddr,
+                                                                               jlong resultAddr,
+                                                                               jint pictureWidth,
+                                                                               jint pictureHeight) {
+    const float multiplier = 20.0f;
+
+    Mat &img = *(Mat *) matAddr;
+    Mat &maskImg = *(Mat *) maskAddr;
+    Mat &result = *(Mat *) resultAddr;
+
+    // Resize mask to original size;
+    maskImg.convertTo(maskImg, CV_8UC1);
+    Size size(pictureWidth, pictureHeight);
+    resize(maskImg, maskImg, size);
+    cv::threshold(maskImg, maskImg, 0, 255, cv::THRESH_BINARY);
+
+    // Blur the background.
+    cv::Mat imgBlur;
+    cv::blur(img, imgBlur, cv::Size(50, 50));
+    cvtColor(imgBlur, imgBlur, COLOR_BGR2GRAY);
+
+    // Do distance transform on the mask to get the amount for alpha blending.
+    cv::Mat dist;
+    cv::distanceTransform(maskImg, dist, cv::DIST_L2, 3);
+    cv::normalize(dist, dist, 0.0, 1.0, cv::NORM_MINMAX);
+
     alphaBlendWithMultiplier(img, imgBlur, dist, result, multiplier);
 }
 }
