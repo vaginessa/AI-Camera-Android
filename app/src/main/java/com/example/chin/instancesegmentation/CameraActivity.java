@@ -64,14 +64,15 @@ public abstract class CameraActivity extends Activity
 
     private Handler mHandler;
     private HandlerThread mHandlerThread;
-    private boolean mUseCamera2API;
     private boolean mIsProcessingFrame = false;
     private boolean mIsProcessingPreviewFrame = false;
     private byte[][] mYuvBytes = new byte[3][];
     private int[] mRgbBytes = null;
     private int[] mRgbBytesPreview = null;
     private int mYRowStride;
+    private byte[] mPictureBytes;
 
+    protected boolean mUseCamera2API;
     protected int mPreviewWidth = 0;
     protected int mPreviewHeight = 0;
     protected int mPictureWidth = 0;
@@ -120,6 +121,10 @@ public abstract class CameraActivity extends Activity
     protected int[] getRgbBytes() {
         mImageConverter.run();
         return mRgbBytes;
+    }
+
+    protected byte[] getPictureBytes() {
+        return mPictureBytes;
     }
 
     protected int[] getRgbBytesPreview() {
@@ -184,8 +189,6 @@ public abstract class CameraActivity extends Activity
         processPreview();
     }
 
-    public byte[] mPictureBytes;
-
     public void onCaptureStillFrame(final byte[] bytes, final Camera camera) {
         if (mIsProcessingFrame) {
             return;
@@ -195,11 +198,10 @@ public abstract class CameraActivity extends Activity
 
         try {
             // Initialize the storage bitmaps once when the resolution is known.
-            if (mRgbBytes == null) {
+            if (mPictureBytes == null) {
                 Camera.Size pictureSize = camera.getParameters().getPictureSize();
                 mPictureHeight = pictureSize.height;
                 mPictureWidth = pictureSize.width;
-                mRgbBytes = new int[mPictureWidth * mPictureHeight];
                 onPictureSizeChosen(new Size(pictureSize.width, pictureSize.height), 90);
             }
         } catch (final Exception e) {
@@ -208,19 +210,6 @@ public abstract class CameraActivity extends Activity
         }
 
         mPictureBytes = bytes;
-
-        /*
-        mImageConverter =
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        ImageUtils.convertYUV420SPToARGB8888(bytes,
-                                mPictureWidth,
-                                mPictureHeight,
-                                mRgbBytes);
-                    }
-                };
-                */
 
         mPostInferenceCallback =
                 new Runnable() {
@@ -234,42 +223,10 @@ public abstract class CameraActivity extends Activity
         processImage();
     }
 
-    private void setupImageConverter(final byte[] bytes, final Camera camera) {
-        try {
-            // Initialize the storage bitmaps once when the resolution is known.
-            if (mRgbBytes == null) {
-                Camera.Size previewSize = camera.getParameters().getPreviewSize();
-                mPreviewHeight = previewSize.height;
-                mPreviewWidth = previewSize.width;
-                mRgbBytes = new int[mPreviewWidth * mPreviewHeight];
-                onPreviewSizeChosen(new Size(previewSize.width, previewSize.height), 90);
-            }
-        } catch (final Exception e) {
-            LOGGER.e(e, "Exception!");
-            return;
-        }
-
-        lastPreviewFrame = bytes;
-        mYuvBytes[0] = bytes;
-        mYRowStride = mPreviewWidth;
-
-        mImageConverter =
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        ImageUtils.convertYUV420SPToARGB8888(bytes,
-                                mPreviewWidth,
-                                mPreviewHeight,
-                                mRgbBytes);
-                    }
-                };
-    }
-
+    // Callback for when a still image is taken with the Camera2 API.
     @Override
     public void onImageAvailable(final ImageReader reader) {
-        LOGGER.i("onImageAvailable");
-        //We need wait until we have some size from onPreviewSizeChosen
-        if (mPreviewWidth == 0 || mPreviewHeight == 0) {
+        if (mPictureWidth == 0 || mPictureHeight == 0) {
             return;
         }
         try {
@@ -286,7 +243,28 @@ public abstract class CameraActivity extends Activity
             mIsProcessingFrame = true;
             Trace.beginSection("imageAvailable");
 
-            setupImageConverter(image);
+            final Plane[] planes = image.getPlanes();
+            fillBytes(planes, mYuvBytes);
+            mYRowStride = planes[0].getRowStride();
+            final int uvRowStride = planes[1].getRowStride();
+            final int uvPixelStride = planes[1].getPixelStride();
+
+            mImageConverter =
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            ImageUtils.convertYUV420ToARGB8888(
+                                    mYuvBytes[0],
+                                    mYuvBytes[1],
+                                    mYuvBytes[2],
+                                    mPictureWidth,
+                                    mPictureHeight,
+                                    mYRowStride,
+                                    uvRowStride,
+                                    uvPixelStride,
+                                    mRgbBytes);
+                        }
+                    };
 
             mPostInferenceCallback =
                     new Runnable() {
@@ -306,38 +284,8 @@ public abstract class CameraActivity extends Activity
         Trace.endSection();
     }
 
-    private void setupImageConverter(Image image) {
-        if (mRgbBytes == null) {
-            mRgbBytes = new int[mPreviewWidth * mPreviewHeight];
-        }
-
-        final Plane[] planes = image.getPlanes();
-        fillBytes(planes, mYuvBytes);
-        mYRowStride = planes[0].getRowStride();
-        final int uvRowStride = planes[1].getRowStride();
-        final int uvPixelStride = planes[1].getPixelStride();
-
-        mImageConverter =
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        ImageUtils.convertYUV420ToARGB8888(
-                                mYuvBytes[0],
-                                mYuvBytes[1],
-                                mYuvBytes[2],
-                                mPreviewWidth,
-                                mPreviewHeight,
-                                mYRowStride,
-                                uvRowStride,
-                                uvPixelStride,
-                                mRgbBytes);
-                    }
-                };
-    }
-
+    // Callback when preview image is available from the Camera2 API
     private void onPreviewImageAvailable(final ImageReader reader) {
-        LOGGER.i("onPreviewImageAvailable");
-        //We need wait until we have some size from onPreviewSizeChosen
         if (mPreviewWidth == 0 || mPreviewHeight == 0) {
             return;
         }
@@ -357,7 +305,28 @@ public abstract class CameraActivity extends Activity
             mIsProcessingPreviewFrame  = true;
             Trace.beginSection("imageAvailable");
 
-            setupImageConverter(image);
+            final Plane[] planes = image.getPlanes();
+            fillBytes(planes, mYuvBytes);
+            mYRowStride = planes[0].getRowStride();
+            final int uvRowStride = planes[1].getRowStride();
+            final int uvPixelStride = planes[1].getPixelStride();
+
+            mPreviewImageConverter =
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            ImageUtils.convertYUV420ToARGB8888(
+                                    mYuvBytes[0],
+                                    mYuvBytes[1],
+                                    mYuvBytes[2],
+                                    mPreviewWidth,
+                                    mPreviewHeight,
+                                    mYRowStride,
+                                    uvRowStride,
+                                    uvPixelStride,
+                                    mRgbBytesPreview);
+                        }
+                    };
 
             mPostPreviewInferenceCallback =
                     new Runnable() {

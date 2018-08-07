@@ -243,15 +243,27 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         mPictureWidth = mRgbFrameBitmap.getWidth();
         */
 
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inMutable = true;
-        mRgbFrameBitmap = BitmapFactory.decodeByteArray(mPictureBytes, 0, mPictureBytes.length, options);
+        // Different ways of retrieving the image depending on the API used.
+        if (mUseCamera2API) {
+            mRgbFrameBitmap.setPixels(
+                    getRgbBytes(), 0, mPictureWidth, 0, 0, mPictureWidth, mPictureHeight);
+        } else {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inMutable = true;
+            byte[] bytes = getPictureBytes();
+            mRgbFrameBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+        }
 
         long start = System.nanoTime();
 
         // Rotate image to the correct orientation.
-        final Bitmap rgbFrameBitmapRotated = Bitmap.createBitmap(
-                mRgbFrameBitmap, 0, 0, mRgbFrameBitmap.getWidth(), mRgbFrameBitmap.getHeight(), mFrameToCropTransform, true);
+        final Bitmap rgbFrameBitmapRotated = Bitmap.createBitmap(mRgbFrameBitmap,
+                0,
+                0,
+                mRgbFrameBitmap.getWidth(),
+                mRgbFrameBitmap.getHeight(),
+                mFrameToCropTransform,
+                true);
 
         final int w = rgbFrameBitmapRotated.getWidth();
         final int h = rgbFrameBitmapRotated.getHeight();
