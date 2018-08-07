@@ -511,6 +511,12 @@ public abstract class CameraActivity extends Activity
                                     onPreviewImageAvailable(reader);
                                 }
                             },
+                            new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    gotoGalleryActivity();
+                                }
+                            },
                             getLayoutId(),
                             getDesiredPreviewFrameSize());
 
@@ -518,22 +524,33 @@ public abstract class CameraActivity extends Activity
             fragment = camera2Fragment;
         } else {
             LOGGER.i("Using Camera API");
-            fragment = new LegacyCameraConnectionFragment(
-                            new Camera.PreviewCallback() {
-                                @Override
-                                public void onPreviewFrame(final byte[] data, final Camera camera) {
-                                    onCaptureStillFrame(data, camera);
-                                }
-                            },
+            fragment = LegacyCameraConnectionFragment.newInstance(
+                    new Camera.PreviewCallback() {
+                        @Override
+                        public void onPreviewFrame(final byte[] data, final Camera camera) {
+                            onCaptureStillFrame(data, camera);
+                        }
+                    },
                     this,
-                            getLayoutId(),
-                            getDesiredPreviewFrameSize());
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            gotoGalleryActivity();
+                        }
+                    },
+                    getLayoutId(),
+                    getDesiredPreviewFrameSize());
         }
 
         getFragmentManager()
                 .beginTransaction()
                 .replace(R.id.container, fragment)
                 .commit();
+    }
+
+    private void gotoGalleryActivity() {
+        Intent intent = new Intent(this, GalleryActivity.class);
+        startActivity(intent);
     }
 
     protected void fillBytes(final Plane[] planes, final byte[][] yuvBytes) {

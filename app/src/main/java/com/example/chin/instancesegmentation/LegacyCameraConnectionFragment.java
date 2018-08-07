@@ -45,14 +45,15 @@ import com.example.chin.instancesegmentation.env.ImageUtils;
 public class LegacyCameraConnectionFragment extends Fragment {
     private Camera mCamera;
     private static final Logger LOGGER = new Logger();
-    private Camera.PreviewCallback mImageListener;
-    private Camera.PreviewCallback mPreviewImageListener;
-    private Size mDesiredSize;
+    private final Camera.PreviewCallback mImageListener;
+    private final Camera.PreviewCallback mPreviewImageListener;
+    private final View.OnClickListener mGotoGalleryListener;
+    private final Size mDesiredSize;
 
     /**
      * The layout identifier to inflate for this Fragment.
      */
-    private int mLayout;
+    private final int mLayout;
 
     /**
      * An {@link AutoFitTextureView} for mCamera preview.
@@ -65,15 +66,32 @@ public class LegacyCameraConnectionFragment extends Fragment {
     private HandlerThread mBackgroundThread;
     private Handler mBackgroundHandler;
 
-    public LegacyCameraConnectionFragment(
+    private LegacyCameraConnectionFragment(
             final Camera.PreviewCallback imageListener,
             final Camera.PreviewCallback previewImageListener,
+            final View.OnClickListener gotoGalleryListener,
             final int layout,
             final Size desiredSize) {
-        this.mImageListener = imageListener;
-        this.mPreviewImageListener = previewImageListener;
-        this.mLayout = layout;
-        this.mDesiredSize = desiredSize;
+
+        mImageListener = imageListener;
+        mPreviewImageListener = previewImageListener;
+        mGotoGalleryListener = gotoGalleryListener;
+        mLayout = layout;
+        mDesiredSize = desiredSize;
+    }
+
+    public static LegacyCameraConnectionFragment newInstance(
+            final Camera.PreviewCallback imageListener,
+            final Camera.PreviewCallback previewImageListener,
+            final View.OnClickListener gotoGalleryListener,
+            final int layout,
+            final Size desiredSize) {
+
+        return new LegacyCameraConnectionFragment(imageListener,
+                previewImageListener,
+                gotoGalleryListener,
+                layout,
+                desiredSize);
     }
 
     /**
@@ -209,13 +227,8 @@ public class LegacyCameraConnectionFragment extends Fragment {
         });
 
         ImageButton galleryButton = view.findViewById(R.id.goto_gallery);
-        galleryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getActivity(), GalleryActivity.class);
-                startActivity(intent);
-            }
-        });
+        galleryButton.setOnClickListener(mGotoGalleryListener);
+
         return view;
     }
 

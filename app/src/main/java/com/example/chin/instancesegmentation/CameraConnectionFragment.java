@@ -271,15 +271,19 @@ public class CameraConnectionFragment extends Fragment {
 
     private final ConnectionCallback mCameraConnectionCallback;
 
+    private final View.OnClickListener mGotoGalleryListener;
+
     private CameraConnectionFragment(
             final ConnectionCallback connectionCallback,
             final OnImageAvailableListener mImageListener,
             final OnImageAvailableListener mPreviewImageListener,
+            final View.OnClickListener mGotoGalleryListener,
             final int layout,
             final Size mInputSize) {
         this.mCameraConnectionCallback = connectionCallback;
         this.mImageListener = mImageListener;
         this.mPreviewImageListener = mPreviewImageListener;
+        this.mGotoGalleryListener = mGotoGalleryListener;
         this.mLayout = layout;
         this.mInputSize = mInputSize;
     }
@@ -360,10 +364,11 @@ public class CameraConnectionFragment extends Fragment {
             final ConnectionCallback callback,
             final OnImageAvailableListener imageListener,
             final OnImageAvailableListener previewImageListener,
+            final View.OnClickListener gotoGalleryListener,
             final int layout,
             final Size inputSize) {
         return new CameraConnectionFragment(
-                callback, imageListener, previewImageListener, layout, inputSize);
+                callback, imageListener, previewImageListener, gotoGalleryListener, layout, inputSize);
     }
 
     @Override
@@ -380,13 +385,7 @@ public class CameraConnectionFragment extends Fragment {
         });
 
         ImageButton galleryButton = view.findViewById(R.id.goto_gallery);
-        galleryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getActivity(), GalleryActivity.class);
-                startActivity(intent);
-            }
-        });
+        galleryButton.setOnClickListener(mGotoGalleryListener);
 
         return view;
     }
@@ -858,8 +857,6 @@ public class CameraConnectionFragment extends Fragment {
             mCaptureSession.abortCaptures();
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
