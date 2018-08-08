@@ -20,7 +20,6 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.hardware.camera2.CameraAccessException;
@@ -41,18 +40,25 @@ import android.view.KeyEvent;
 import android.view.Surface;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.Toast;
-import java.nio.ByteBuffer;
-import com.example.chin.instancesegmentation.env.Logger;
+
 import com.example.chin.instancesegmentation.env.ImageUtils;
-import org.opencv.android.LoaderCallbackInterface;
+import com.example.chin.instancesegmentation.env.Logger;
+
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 
 public abstract class CameraActivity extends Activity
-        implements OnImageAvailableListener, Camera.PreviewCallback {
+        implements
+            OnImageAvailableListener,
+            Camera.PreviewCallback,
+            CameraFragment.OnCameraButtonClickedListener {
+
     private static final Logger LOGGER = new Logger();
 
     private static final int PERMISSIONS_REQUEST = 1;
@@ -415,6 +421,20 @@ public abstract class CameraActivity extends Activity
             } else {
                 requestPermission();
             }
+        }
+    }
+
+    @Override
+    public void onCameraButtonClicked(View v) {
+        switch (v.getId()) {
+            case R.id.goto_gallery:
+                // Replace camera fragment with gallery view.
+                getFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.container, RecyclerViewFragment.newInstance(new ArrayList<ImageItem>())) // TEMP: need to get list of images from local storage.
+                        .commit();
+                break;
+
         }
     }
 
