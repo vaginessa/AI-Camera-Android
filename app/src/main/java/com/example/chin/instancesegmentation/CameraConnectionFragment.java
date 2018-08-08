@@ -57,7 +57,7 @@ import java.util.concurrent.TimeUnit;
 import com.example.chin.instancesegmentation.env.Logger;
 
 
-public class CameraConnectionFragment extends Fragment {
+public class CameraConnectionFragment extends CameraFragment {
     private static final Logger LOGGER = new Logger();
 
     private static final String TAG = "CameraConnectionFrag";
@@ -271,19 +271,15 @@ public class CameraConnectionFragment extends Fragment {
 
     private final ConnectionCallback mCameraConnectionCallback;
 
-    private final View.OnClickListener mGotoGalleryListener;
-
     private CameraConnectionFragment(
             final ConnectionCallback connectionCallback,
             final OnImageAvailableListener mImageListener,
             final OnImageAvailableListener mPreviewImageListener,
-            final View.OnClickListener mGotoGalleryListener,
             final int layout,
             final Size mInputSize) {
         this.mCameraConnectionCallback = connectionCallback;
         this.mImageListener = mImageListener;
         this.mPreviewImageListener = mPreviewImageListener;
-        this.mGotoGalleryListener = mGotoGalleryListener;
         this.mLayout = layout;
         this.mInputSize = mInputSize;
     }
@@ -364,11 +360,10 @@ public class CameraConnectionFragment extends Fragment {
             final ConnectionCallback callback,
             final OnImageAvailableListener imageListener,
             final OnImageAvailableListener previewImageListener,
-            final View.OnClickListener gotoGalleryListener,
             final int layout,
             final Size inputSize) {
         return new CameraConnectionFragment(
-                callback, imageListener, previewImageListener, gotoGalleryListener, layout, inputSize);
+                callback, imageListener, previewImageListener, layout, inputSize);
     }
 
     @Override
@@ -385,7 +380,7 @@ public class CameraConnectionFragment extends Fragment {
         });
 
         ImageButton galleryButton = view.findViewById(R.id.goto_gallery);
-        galleryButton.setOnClickListener(mGotoGalleryListener);
+        galleryButton.setOnClickListener(mOnCameraButtonClicked);
 
         return view;
     }

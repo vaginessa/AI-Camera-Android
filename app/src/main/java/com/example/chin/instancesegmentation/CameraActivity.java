@@ -511,12 +511,6 @@ public abstract class CameraActivity extends Activity
                                     onPreviewImageAvailable(reader);
                                 }
                             },
-                            new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    gotoGalleryActivity();
-                                }
-                            },
                             getLayoutId(),
                             getDesiredPreviewFrameSize());
 
@@ -532,12 +526,6 @@ public abstract class CameraActivity extends Activity
                         }
                     },
                     this,
-                    new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            gotoGalleryActivity();
-                        }
-                    },
                     getLayoutId(),
                     getDesiredPreviewFrameSize());
         }
@@ -546,11 +534,6 @@ public abstract class CameraActivity extends Activity
                 .beginTransaction()
                 .replace(R.id.container, fragment)
                 .commit();
-    }
-
-    private void gotoGalleryActivity() {
-        Intent intent = new Intent(this, GalleryActivity.class);
-        startActivity(intent);
     }
 
     protected void fillBytes(final Plane[] planes, final byte[][] yuvBytes) {
