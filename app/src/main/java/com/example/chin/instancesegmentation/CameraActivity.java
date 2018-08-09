@@ -17,8 +17,6 @@
 package com.example.chin.instancesegmentation;
 
 import android.Manifest;
-import android.app.Activity;
-import android.app.Fragment;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
@@ -35,6 +33,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Trace;
+import android.support.v4.app.Fragment;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Size;
 import android.view.KeyEvent;
 import android.view.Surface;
@@ -53,7 +53,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 
 
-public abstract class CameraActivity extends Activity
+public abstract class CameraActivity extends AppCompatActivity
         implements
             OnImageAvailableListener,
             Camera.PreviewCallback,
@@ -429,7 +429,7 @@ public abstract class CameraActivity extends Activity
         switch (v.getId()) {
             case R.id.goto_gallery:
                 // Replace camera fragment with gallery view.
-                getFragmentManager()
+                getSupportFragmentManager()
                         .beginTransaction()
                         .replace(R.id.container, RecyclerViewFragment.newInstance(new ArrayList<ImageItem>())) // TEMP: need to get list of images from local storage.
                         .commit();
@@ -550,7 +550,7 @@ public abstract class CameraActivity extends Activity
                     getDesiredPreviewFrameSize());
         }
 
-        getFragmentManager()
+        getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.container, fragment)
                 .commit();

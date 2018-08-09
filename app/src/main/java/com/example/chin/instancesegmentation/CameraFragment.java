@@ -1,7 +1,7 @@
 package com.example.chin.instancesegmentation;
 
 import android.app.Activity;
-import android.app.Fragment;
+import android.support.v4.app.Fragment;
 import android.view.View;
 
 public class CameraFragment extends Fragment {
