@@ -24,4 +24,10 @@ public class GalleryPagerAdapter extends FragmentStatePagerAdapter {
     public int getCount() {
         return images.size();
     }
+
+    @Override
+    public int getItemPosition(Object object) {
+        // TODO update image displayed in the fragment.
+        return super.getItemPosition(object);
+    }
 }

@@ -626,6 +626,19 @@ public abstract class CameraActivity extends AppCompatActivity
         }
     }
 
+    protected void notifyFragmentOfImageChange(String filename) {
+        Fragment fragment = getSupportFragmentManager()
+                .findFragmentById(R.id.container);
+
+        if (fragment != null && fragment.isAdded()) {
+            if (fragment instanceof RecyclerViewFragment) {
+                ((RecyclerViewFragment)fragment).notifyImageChange(filename);
+            } else if (fragment instanceof GalleryViewPagerFragment) {
+                //((GalleryViewPagerFragment)fragment)
+            }
+        }
+    }
+
     protected abstract void processImage();
     protected abstract void processPreview();
     protected abstract void onPreviewSizeChosen(final Size size, final int rotation);

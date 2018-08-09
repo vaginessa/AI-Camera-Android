@@ -1,6 +1,5 @@
 package com.example.chin.instancesegmentation;
 
-import android.media.Image;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.GridLayoutManager;
@@ -22,6 +21,7 @@ public class RecyclerViewFragment extends Fragment implements GalleryItemClickLi
     public static final String TAG = RecyclerViewFragment.class.getSimpleName();
 
     private ArrayList<ImageItem> mImages;
+    private RecyclerViewAdapter mAdapter;
 
     public RecyclerViewFragment() {
         // Required empty public constructor
@@ -64,18 +64,26 @@ public class RecyclerViewFragment extends Fragment implements GalleryItemClickLi
         getFragmentManager()
                 .beginTransaction()
                 .addToBackStack(TAG)
-                .replace(R.id.content, galleryViewPagerFragment)
+                .replace(R.id.container, galleryViewPagerFragment)
                 .commit();
     }
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        RecyclerViewAdapter recyclerViewAdapter =
-                new RecyclerViewAdapter(getActivity(), mImages,this);
+        mAdapter = new RecyclerViewAdapter(getActivity(), mImages,this);
         RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
         GridLayoutManager gridLayoutManager = new GridLayoutManager(getContext(), 2);
         recyclerView.setLayoutManager(gridLayoutManager);
-        recyclerView.setAdapter(recyclerViewAdapter);
+        recyclerView.setAdapter(mAdapter);
+    }
+
+    public void notifyImageChange(String filename) {
+        for (int pos = 0; pos < mImages.size(); ++pos) {
+            if (mImages.get(pos).getTitle() == filename) {
+                mAdapter.notifyItemChanged(pos);
+                break;
+            }
+        }
     }
 }

@@ -14,6 +14,8 @@ public class GalleryViewPagerFragment extends Fragment {
     private static final String EXTRA_INITIAL_POS = "initial_pos";
     private static final String EXTRA_IMAGES = "images";
 
+    private GalleryPagerAdapter mAdapter;
+
     public GalleryViewPagerFragment() {
     }
 
@@ -44,11 +46,13 @@ public class GalleryViewPagerFragment extends Fragment {
 
         int currentItem = getArguments().getInt(EXTRA_INITIAL_POS);
         ArrayList<ImageItem> images = getArguments().getParcelableArrayList(EXTRA_IMAGES);
-
-        GalleryPagerAdapter galleryPagerAdapter =
-                new GalleryPagerAdapter(getChildFragmentManager(), images);
+        mAdapter = new GalleryPagerAdapter(getChildFragmentManager(), images);
         ViewPager viewPager = (ViewPager) view.findViewById(R.id.view_pager);
-        viewPager.setAdapter(galleryPagerAdapter);
+        viewPager.setAdapter(mAdapter);
         viewPager.setCurrentItem(currentItem);
+    }
+
+    public void notifyImageChange(String filename) {
+        mAdapter.notifyDataSetChanged();
     }
 }
