@@ -11,6 +11,7 @@ import com.github.chrisbanes.photoview.PhotoView;
 
 public class ImageDetailFragment extends Fragment {
     private static final String EXTRA_IMAGE = "image_item";
+    private View mView;
 
     public ImageDetailFragment() { }
 
@@ -35,10 +36,17 @@ public class ImageDetailFragment extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        mView = view;
+        setView();
+    }
 
+    public void updateFragment() {
+        setView();
+    }
+
+    private void setView() {
         final ImageItem imageItem = getArguments().getParcelable(EXTRA_IMAGE);
-        final PhotoView photoView = (PhotoView)view.findViewById(R.id.detail_image);
-
+        final PhotoView photoView = (PhotoView)mView.findViewById(R.id.detail_image);
         photoView.setImageBitmap(BitmapFactory.decodeFile(imageItem.getPath()));
     }
 }

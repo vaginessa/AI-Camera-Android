@@ -634,7 +634,7 @@ public abstract class CameraActivity extends AppCompatActivity
             if (fragment instanceof RecyclerViewFragment) {
                 ((RecyclerViewFragment)fragment).notifyImageChange(filename);
             } else if (fragment instanceof GalleryViewPagerFragment) {
-                //((GalleryViewPagerFragment)fragment)
+                ((GalleryViewPagerFragment)fragment).notifyImageChange(filename);
             }
         }
     }

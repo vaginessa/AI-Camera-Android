@@ -27,7 +27,8 @@ public class GalleryPagerAdapter extends FragmentStatePagerAdapter {
 
     @Override
     public int getItemPosition(Object object) {
-        // TODO update image displayed in the fragment.
+        ImageDetailFragment f = (ImageDetailFragment)object;
+        f.updateFragment();
         return super.getItemPosition(object);
     }
 }
