@@ -17,44 +17,48 @@ extern "C"
     }
 }
 
-void alphaBlendWithMultiplier(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::Mat &result, float multiplier)
-{
-    int nRows = result.rows;
-    int nCols = result.cols * result.channels();
-
-    if (result.isContinuous() &&
-        foreground.isContinuous() &&
-        background.isContinuous() &&
-        alpha.isContinuous())
-    {
-        nCols *= nRows;
-        nRows = 1;
-    }
-
+void alphaBlendWithMultiplier(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::Mat &result, float multiplier) {
     const uchar *fptr;
     const uchar *bptr;
     const float *aptr;
     uchar *rptr;
+    float val;
 
-    for (auto i = 0; i < nRows; ++i)
+    auto cols = result.cols;
+    auto rows = result.rows;
+    auto channels = result.channels();
+
+    auto fstep0 = foreground.step[0];
+    auto fstep1 = foreground.step[1];
+    auto bstep0 = background.step[0];
+    auto bstep1 = background.step[1];
+    auto astep0 = alpha.step[0];
+    auto astep1 = alpha.step[1];
+    auto rstep0 = result.step[0];
+    auto rstep1 = result.step[1];
+
+    for (auto i = 0; i < rows; ++i)
     {
-        fptr = foreground.ptr<uchar>(i);
-        bptr = background.ptr<uchar>(i);
-        aptr = alpha.ptr<float>(i);
-        rptr = result.ptr<uchar>(i);
+        fptr = foreground.data + i * fstep0;
+        bptr = background.data + i * bstep0;
+        rptr = result.data + i * rstep0;
 
-        auto val = 0.0f;
-
-        for (auto j = 0; j < nCols; ++j, fptr++, bptr++, rptr++)
+        for (auto j = 0; j < cols; ++j)
         {
-            if (j % 3 == 0)
+            aptr = reinterpret_cast<float*>(alpha.data + i * astep0 + j * astep1);
+            val = min((*aptr) * multiplier, 1.0f);
+
+            rptr[0] = val * fptr[0] + (1.0 - val) * bptr[0];
+            rptr[1] = val * fptr[1] + (1.0 - val) * bptr[1];
+            rptr[2] = val * fptr[2] + (1.0 - val) * bptr[2];
+            if (channels == 4)
             {
-                val = *aptr;
-                val = min(val * multiplier, 1.0f);
-                aptr++;
+                rptr[3] = val * fptr[3] + (1.0 - val) * bptr[3];
             }
 
-            *rptr = val * (*fptr) + (1.0f - val) * (*bptr);
+            fptr += fstep1;
+            bptr += bstep1;
+            rptr += rstep1;
         }
     }
 }
