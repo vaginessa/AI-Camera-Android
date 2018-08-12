@@ -245,6 +245,8 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
         } else {
             mTextureView.setSurfaceTextureListener(surfaceTextureListener);
         }
+
+        ImageManager.getInstance().clearCachedBitmap();
     }
 
     @Override

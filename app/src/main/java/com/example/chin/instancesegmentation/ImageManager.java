@@ -9,6 +9,7 @@ import com.example.chin.instancesegmentation.env.ImageUtils;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Set;
 
 public class ImageManager
 {
@@ -43,6 +44,11 @@ public class ImageManager
         ArrayList<ImageItem> images = new ArrayList<>();
         File saveDir = new File(getSavePath());
 
+        for (String title : mCachedBitmap.keySet()) {
+            ImageItem item = new ImageItem(title, null);
+            images.add(item);
+        }
+
         if (saveDir.isDirectory()) {
             File[] files = saveDir.listFiles();
 
@@ -50,11 +56,6 @@ public class ImageManager
                 ImageItem item = new ImageItem(files[i].getName(), files[i].getPath());
                 images.add(item);
             }
-        }
-
-        for (String title : mCachedBitmap.keySet()) {
-            ImageItem item = new ImageItem(title, null);
-            images.add(item);
         }
 
         return images;
@@ -93,6 +94,7 @@ public class ImageManager
     }
 
     public void addPendingImage(String title) {
+        mPendingImages.add(title);
         mCachedBitmap.put(title, null);
     }
 
@@ -103,6 +105,15 @@ public class ImageManager
     public void saveBitmap(String title, Bitmap bitmap) {
         // Use the title as the filename.
         ImageUtils.saveBitmap(bitmap, title);
-        mCachedBitmap.remove(title);
+        mPendingImages.remove(title);
+    }
+
+    public void clearCachedBitmap() {
+        Set<String> titles = mCachedBitmap.keySet();
+        for (String title : titles) {
+            if (!mPendingImages.contains(title)) {
+                mCachedBitmap.remove(title);
+            }
+        }
     }
 }
