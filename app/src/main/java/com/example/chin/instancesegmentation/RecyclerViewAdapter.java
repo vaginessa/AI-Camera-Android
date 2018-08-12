@@ -1,6 +1,8 @@
 package com.example.chin.instancesegmentation;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -41,11 +43,15 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         viewHolder.imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
 
         // Load a smaller version of the image for displaying.
-        viewHolder.imageView.setImageBitmap(
-                ImageUtils.decodeSampledBitmapFromFile(
-                        imageItem.getPath(),
-                        displaySize,
-                        displaySize));
+        Bitmap bitmap =
+                ImageManager.getInstance().getSmallBitmap(imageItem, displaySize, displaySize);
+
+        // Display "loading please wait" image if image has not finished processing.
+        if (bitmap == null) {
+            bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.img12);
+        }
+
+        viewHolder.imageView.setImageBitmap(bitmap);
 
         viewHolder.imageView.setOnClickListener(new View.OnClickListener() {
             @Override

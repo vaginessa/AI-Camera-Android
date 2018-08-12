@@ -50,7 +50,6 @@ import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 
 
 public abstract class CameraActivity extends AppCompatActivity
@@ -428,13 +427,16 @@ public abstract class CameraActivity extends AppCompatActivity
     public void onCameraButtonClicked(View v) {
         switch (v.getId()) {
             case R.id.goto_gallery:
-                // Replace camera fragment with gallery view.
+                RecyclerViewFragment fragment
+                        = RecyclerViewFragment.newInstance(
+                                ImageManager.getInstance().getImageItems());
+
                 getSupportFragmentManager()
                         .beginTransaction()
-                        .replace(R.id.container, RecyclerViewFragment.newInstance(new ArrayList<ImageItem>())) // TEMP: need to get list of images from local storage.
+                        .replace(R.id.container, fragment)
+                        .addToBackStack(null)
                         .commit();
                 break;
-
         }
     }
 
@@ -627,8 +629,7 @@ public abstract class CameraActivity extends AppCompatActivity
     }
 
     protected void notifyFragmentOfImageChange(String filename) {
-        Fragment fragment = getSupportFragmentManager()
-                .findFragmentById(R.id.container);
+        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.container);
 
         if (fragment != null && fragment.isAdded()) {
             if (fragment instanceof RecyclerViewFragment) {
