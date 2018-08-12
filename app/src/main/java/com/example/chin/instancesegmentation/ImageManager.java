@@ -85,7 +85,7 @@ public class ImageManager
             if (mCachedBitmap.containsKey(imageItem.getTitle())) {
                 bitmap = mCachedBitmap.get(imageItem.getTitle());
                 if (bitmap != null) {
-                    bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
+                    bitmap = ImageUtils.resizeBitmapProportionally(bitmap, width, height);
                 }
             }
         }

@@ -337,6 +337,15 @@ public class ImageUtils {
         // Raw height and width of image.
         final int height = options.outHeight;
         final int width = options.outWidth;
+
+        return calculateInSampleSize(width, height, reqWidth, reqHeight);
+    }
+
+    public static int calculateInSampleSize(int width,
+                                            int height,
+                                            int reqWidth,
+                                            int reqHeight) {
+
         int inSampleSize = 1;
 
         if (height > reqHeight || width > reqWidth) {
@@ -388,6 +397,16 @@ public class ImageUtils {
         // Decode bitmap with inSampleSize set
         options.inJustDecodeBounds = false;
         return BitmapFactory.decodeResource(res, resId, options);
+    }
+
+    public static Bitmap resizeBitmapProportionally(Bitmap src, int reqWidth, int reqHeight) {
+        int width = src.getWidth();
+        int height = src.getHeight();
+        int inSampleSize = calculateInSampleSize(width, height, reqWidth, reqHeight);
+        int newWidth = width / inSampleSize;
+        int newHeight = height / inSampleSize;
+
+        return Bitmap.createScaledBitmap(src, newWidth, newHeight, true);
     }
 }
 
