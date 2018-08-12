@@ -3,6 +3,7 @@ package com.example.chin.instancesegmentation;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -46,9 +47,10 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         Bitmap bitmap =
                 ImageManager.getInstance().getSmallBitmap(imageItem, displaySize, displaySize);
 
-        // Display "loading please wait" image if image has not finished processing.
+        // Image is still processing. Display a black image as a placeholder.
         if (bitmap == null) {
-            bitmap = BitmapFactory.decodeResource(mContext.getResources(), R.drawable.img12);
+            bitmap = Bitmap.createBitmap(displaySize, displaySize, Bitmap.Config.ARGB_8888);
+            bitmap.eraseColor(Color.BLACK);
         }
 
         viewHolder.imageView.setImageBitmap(bitmap);

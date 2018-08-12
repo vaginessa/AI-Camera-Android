@@ -52,12 +52,13 @@ public class ImageDetailFragment extends Fragment {
         final int width = Resources.getSystem().getDisplayMetrics().widthPixels;
         final int height = Resources.getSystem().getDisplayMetrics().heightPixels;
         final Bitmap bitmap = ImageManager.getInstance().getSmallBitmap(imageItem, width, height);
+        final TextView textView = mView.findViewById(R.id.loading_text);
+        final PhotoView photoView = mView.findViewById(R.id.detail_image);
 
         if (bitmap == null) {
-            final TextView textView = mView.findViewById(R.id.loading_text);
             textView.setText(R.string.loading_text);
         } else {
-            final PhotoView photoView = mView.findViewById(R.id.detail_image);
+            textView.setText("");
             photoView.setImageBitmap(bitmap);
         }
     }
