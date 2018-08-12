@@ -8,17 +8,11 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.media.ImageReader;
 
-import android.renderscript.Allocation;
-import android.renderscript.Element;
-import android.renderscript.RenderScript;
-import android.renderscript.ScriptIntrinsicBlur;
-import android.renderscript.Type;
 import android.util.Size;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import com.example.chin.instancesegmentation.env.Logger;
@@ -215,15 +209,16 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 final List<Classifier.Recognition> results = mClassifier.recognizeImage(mCroppedPreviewBitmap);
                 if (results.size() > 0) {
                     final Classifier.Recognition result = results.get(0);
-                    //LOGGER.i("Detected " + result.getTitle() + " with confidence " + result.getConfidence());
                         runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
                                 TextView textView = findViewById(R.id.label);
-                                if (result.getConfidence() >= MINIMUM_CONFIDENCE) {
-                                    textView.setText(result.getTitle());
-                                } else {
-                                    textView.setText("");
+                                if (textView != null) {
+                                    if (result.getConfidence() >= MINIMUM_CONFIDENCE) {
+                                        textView.setText(result.getTitle());
+                                    } else {
+                                        textView.setText("");
+                                    }
                                 }
                             }
                         });
@@ -237,54 +232,59 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     protected void processImage() {
         LOGGER.i("Process still");
 
-        /*
-        mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.sana_r);
-        mPictureHeight = mRgbFrameBitmap.getHeight();
-        mPictureWidth = mRgbFrameBitmap.getWidth();
-        */
-
-        // Different ways of retrieving the image depending on the API used.
-        if (mUseCamera2API) {
-            mRgbFrameBitmap.setPixels(
-                    getRgbBytes(), 0, mPictureWidth, 0, 0, mPictureWidth, mPictureHeight);
-        } else {
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            options.inMutable = true;
-            byte[] bytes = getPictureBytes();
-            mRgbFrameBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
-        }
-
-        long start = System.nanoTime();
-
-        // Rotate image to the correct orientation.
-        final Bitmap rgbFrameBitmapRotated = Bitmap.createBitmap(mRgbFrameBitmap,
-                0,
-                0,
-                mRgbFrameBitmap.getWidth(),
-                mRgbFrameBitmap.getHeight(),
-                mFrameToCropTransform,
-                true);
-
-        final int w = rgbFrameBitmapRotated.getWidth();
-        final int h = rgbFrameBitmapRotated.getHeight();
-
-        // DeepLab requires the image to be resized.
-        final float scaleFactor = (float)DEEPLAB_IMAGE_SIZE / Math.max(w, h);
-        mCropWidth = Math.round(scaleFactor * w);
-        mCropHeight = Math.round(scaleFactor * h);
-
-        mCroppedBitmap =
-                Bitmap.createScaledBitmap(rgbFrameBitmapRotated, mCropWidth, mCropHeight, true);
-
-        readyForNextImage();
-
-        final long mid1 = System.nanoTime();
-        long dur1 = (mid1 - start) / 1000000 ;
-        LOGGER.i("Preparing bitmap took " + dur1 + " ms");
+        final Long timeStamp = System.currentTimeMillis();
+        final String filename = "IMG_" + timeStamp.toString() + ".png";
+        ImageManager.getInstance().addPendingImage(filename);
 
         runInBackground(new Runnable() {
             @Override
             public void run() {
+
+                /*
+                mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.nayeon);
+                mPictureHeight = mRgbFrameBitmap.getHeight();
+                mPictureWidth = mRgbFrameBitmap.getWidth();
+                */
+
+                // Different ways of retrieving the image depending on the API used.
+                if (mUseCamera2API) {
+                    mRgbFrameBitmap.setPixels(
+                            getRgbBytes(), 0, mPictureWidth, 0, 0, mPictureWidth, mPictureHeight);
+                } else {
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inMutable = true;
+                    byte[] bytes = getPictureBytes();
+                    mRgbFrameBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, options);
+                }
+
+                long start = System.nanoTime();
+
+                // Rotate image to the correct orientation.
+                final Bitmap rgbFrameBitmapRotated = Bitmap.createBitmap(mRgbFrameBitmap,
+                        0,
+                        0,
+                        mRgbFrameBitmap.getWidth(),
+                        mRgbFrameBitmap.getHeight(),
+                        mFrameToCropTransform,
+                        true);
+
+                final int w = rgbFrameBitmapRotated.getWidth();
+                final int h = rgbFrameBitmapRotated.getHeight();
+
+                // DeepLab requires the image to be resized.
+                final float scaleFactor = (float)DEEPLAB_IMAGE_SIZE / Math.max(w, h);
+                mCropWidth = Math.round(scaleFactor * w);
+                mCropHeight = Math.round(scaleFactor * h);
+
+                mCroppedBitmap =
+                        Bitmap.createScaledBitmap(rgbFrameBitmapRotated, mCropWidth, mCropHeight, true);
+
+                readyForNextImage();
+
+                final long mid1 = System.nanoTime();
+                long dur1 = (mid1 - start) / 1000000 ;
+                LOGGER.i("Preparing bitmap took " + dur1 + " ms");
+
                 final List<Classifier.Recognition> results = mDetector.recognizeImage(mCroppedBitmap);
 
                 long mid2 = System.nanoTime();
@@ -316,8 +316,10 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 long dur3 = (mid3 - mid2) / 1000000;
                 LOGGER.i("Post processing took " + dur3 + " ms");
 
-                final Long timeStamp = System.currentTimeMillis();
-                ImageUtils.saveBitmap(rgbFrameBitmapRotated, "IMG_" + timeStamp.toString() + ".png");
+                ImageManager.getInstance().cacheBitmap(filename, rgbFrameBitmapRotated);
+                onProcessingComplete(filename);
+                ImageManager.getInstance().saveBitmap(filename, rgbFrameBitmapRotated);
+
                 showToast("Saved");
 
                 long mid4 = System.nanoTime();
@@ -325,6 +327,15 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 LOGGER.i("Saving to file took " + dur4 + " ms");
 
                 mComputingDetection = false;
+            }
+        });
+    }
+
+    private void onProcessingComplete(final String filename) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                notifyFragmentOfImageChange(filename);
             }
         });
     }
