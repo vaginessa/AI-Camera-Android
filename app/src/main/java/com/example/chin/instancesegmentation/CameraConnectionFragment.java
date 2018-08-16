@@ -369,7 +369,7 @@ public class CameraConnectionFragment extends CameraFragment {
             final LayoutInflater inflater, final ViewGroup container, final Bundle savedInstanceState) {
 
         View view = inflater.inflate(mLayout, container, false);
-        Button button = view.findViewById(R.id.picture);
+        ImageButton button = view.findViewById(R.id.picture);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
