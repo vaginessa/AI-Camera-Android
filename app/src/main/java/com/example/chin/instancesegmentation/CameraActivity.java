@@ -427,6 +427,18 @@ public abstract class CameraActivity extends AppCompatActivity
     public void onCameraButtonClicked(View v) {
         switch (v.getId()) {
             case R.id.goto_gallery:
+                GalleryViewPagerFragment galleryViewPagerFragment =
+                        GalleryViewPagerFragment.newInstance(
+                                0, ImageManager.getInstance().getImageItems());
+
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.container, galleryViewPagerFragment)
+                        .addToBackStack(null)
+                        .commit();
+
+                // TODO improve the loading speed of the gallery page. Remove it for now.
+                /*
                 RecyclerViewFragment fragment
                         = RecyclerViewFragment.newInstance(
                                 ImageManager.getInstance().getImageItems());
@@ -436,6 +448,7 @@ public abstract class CameraActivity extends AppCompatActivity
                         .replace(R.id.container, fragment)
                         .addToBackStack(null)
                         .commit();
+                */
                 break;
         }
     }
