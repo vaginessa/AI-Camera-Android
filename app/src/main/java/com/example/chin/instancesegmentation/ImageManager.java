@@ -1,5 +1,6 @@
 package com.example.chin.instancesegmentation;
 
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
@@ -84,9 +85,6 @@ public class ImageManager
         if (bitmap == null) {
             if (mCachedBitmap.containsKey(imageItem.getTitle())) {
                 bitmap = mCachedBitmap.get(imageItem.getTitle());
-                if (bitmap != null) {
-                    bitmap = ImageUtils.resizeBitmapProportionally(bitmap, width, height);
-                }
             }
         }
 
@@ -99,7 +97,11 @@ public class ImageManager
     }
 
     public void cacheBitmap(String title, Bitmap bitmap) {
-        mCachedBitmap.put(title, bitmap);
+        // Only cache a scaled down version of the bitmap.
+        final int width = Resources.getSystem().getDisplayMetrics().widthPixels / 2;
+        final int height = Resources.getSystem().getDisplayMetrics().heightPixels / 2;
+        Bitmap resizedBitmap = ImageUtils.resizeBitmapProportionally(bitmap, width, height);
+        mCachedBitmap.put(title, resizedBitmap);
     }
 
     public void saveBitmap(String title, Bitmap bitmap) {

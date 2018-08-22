@@ -4,6 +4,8 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,26 +42,43 @@ public class ImageDetailFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mView = view;
-        setView();
+        setViewAsync();
     }
 
     public void updateFragment() {
-        setView();
+        setViewAsync();
     }
 
-    private void setView() {
+    private void setViewAsync() {
         final ImageItem imageItem = getArguments().getParcelable(EXTRA_IMAGE);
-        final int width = Resources.getSystem().getDisplayMetrics().widthPixels;
-        final int height = Resources.getSystem().getDisplayMetrics().heightPixels;
-        final Bitmap bitmap = ImageManager.getInstance().getSmallBitmap(imageItem, width, height);
+        final int width = Resources.getSystem().getDisplayMetrics().widthPixels / 2;
+        final int height = Resources.getSystem().getDisplayMetrics().heightPixels / 2;
         final TextView textView = mView.findViewById(R.id.loading_text);
         final PhotoView photoView = mView.findViewById(R.id.detail_image);
 
-        if (bitmap == null) {
-            textView.setText(R.string.loading_text);
-        } else {
-            textView.setText("");
-            photoView.setImageBitmap(bitmap);
-        }
+        final Handler handler = new Handler() {
+            @Override
+            public void handleMessage(Message message) {
+                Bitmap bitmap = (Bitmap)message.obj;
+                if (bitmap == null) {
+                    textView.setText(R.string.loading_text);
+                } else {
+                    textView.setText("");
+                    photoView.setImageBitmap(bitmap);
+                }
+            }
+        };
+
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                final Bitmap bitmap =
+                        ImageManager.getInstance().getSmallBitmap(imageItem, width, height);
+                Message message = handler.obtainMessage(1, bitmap);
+                handler.sendMessage(message);
+            }
+        };
+
+        thread.start();
     }
 }
