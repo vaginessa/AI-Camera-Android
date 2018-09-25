@@ -159,6 +159,8 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
         mPictureWidth = size.getWidth();
         mPictureHeight = size.getHeight();
 
+        mSensorOrientation = rotation - getScreenOrientation();
+
         mRgbFrameBitmap = Bitmap.createBitmap(mPictureWidth, mPictureHeight, Bitmap.Config.ARGB_8888);
 
         mCropToFrameTransform = new Matrix();

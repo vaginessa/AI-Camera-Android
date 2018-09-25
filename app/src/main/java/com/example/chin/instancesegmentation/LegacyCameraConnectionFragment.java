@@ -43,7 +43,9 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
     private static final Logger LOGGER = new Logger();
     private final Camera.PreviewCallback mImageListener;
     private final Camera.PreviewCallback mPreviewImageListener;
+    private final CameraChangedListener mCameraChangedListener;
     private final Size mDesiredSize;
+    private boolean mUseFrontCamera = false;
 
     /**
      * The layout identifier to inflate for this Fragment.
@@ -64,11 +66,13 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
     private LegacyCameraConnectionFragment(
             final Camera.PreviewCallback imageListener,
             final Camera.PreviewCallback previewImageListener,
+            final CameraChangedListener cameraChangedListener,
             final int layout,
             final Size desiredSize) {
 
         mImageListener = imageListener;
         mPreviewImageListener = previewImageListener;
+        mCameraChangedListener = cameraChangedListener;
         mLayout = layout;
         mDesiredSize = desiredSize;
     }
@@ -76,11 +80,12 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
     public static LegacyCameraConnectionFragment newInstance(
             final Camera.PreviewCallback imageListener,
             final Camera.PreviewCallback previewImageListener,
+            final CameraChangedListener cameraChangedListener,
             final int layout,
             final Size desiredSize) {
 
         return new LegacyCameraConnectionFragment(
-                imageListener, previewImageListener, layout, desiredSize);
+                imageListener, previewImageListener, cameraChangedListener, layout, desiredSize);
     }
 
     /**
@@ -124,7 +129,11 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
             };
 
     private void openCamera(final SurfaceTexture texture) {
-        int index = getCameraId();
+        int index = mUseFrontCamera ? getFrontCameraId() : getCameraId();
+
+        if (mCamera != null) {
+            stopCamera();
+        }
         mCamera = Camera.open(index);
 
         try {
@@ -218,6 +227,16 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
         ImageButton galleryButton = view.findViewById(R.id.goto_gallery);
         galleryButton.setOnClickListener(mOnCameraButtonClicked);
 
+        ImageButton switchCamera = view.findViewById(R.id.switch_camera);
+        switchCamera.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mUseFrontCamera = !mUseFrontCamera;
+                mCameraChangedListener.onCameraChangedListener(mUseFrontCamera);
+                openCamera(mTextureView.getSurfaceTexture());
+            }
+        });
+
         return view;
     }
 
@@ -252,7 +271,6 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
     @Override
     public void onPause() {
         stopCamera();
-        mTextureView.setVisibility(View.GONE);
         stopBackgroundThread();
         super.onPause();
     }
@@ -300,5 +318,15 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
                 return i;
         }
         return -1; // No mCamera found
+    }
+
+    private int getFrontCameraId() {
+        CameraInfo ci = new CameraInfo();
+        for (int i = 0; i < Camera.getNumberOfCameras(); ++i) {
+            Camera.getCameraInfo(i, ci);
+            if (ci.facing == CameraInfo.CAMERA_FACING_FRONT)
+                return i;
+        }
+        return -1;
     }
 }

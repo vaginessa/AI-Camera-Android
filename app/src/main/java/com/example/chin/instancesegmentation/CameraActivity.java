@@ -88,6 +88,8 @@ public abstract class CameraActivity extends AppCompatActivity
     private Runnable mImageConverter;
     private Runnable mPreviewImageConverter;
 
+    private int mRotation = 90;
+
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
         public void onManagerConnected(int status) {
@@ -207,7 +209,7 @@ public abstract class CameraActivity extends AppCompatActivity
                 Camera.Size pictureSize = camera.getParameters().getPictureSize();
                 mPictureHeight = pictureSize.height;
                 mPictureWidth = pictureSize.width;
-                onPictureSizeChosen(new Size(pictureSize.width, pictureSize.height), 90);
+                onPictureSizeChosen(new Size(pictureSize.width, pictureSize.height), mRotation);
             }
         } catch (final Exception e) {
             LOGGER.e(e, "Exception!");
@@ -531,7 +533,7 @@ public abstract class CameraActivity extends AppCompatActivity
             finish();
         }
 
-        Fragment fragment;
+        final Fragment fragment;
         if (mUseCamera2API) {
             LOGGER.i("Using Camera2 API");
             CameraConnectionFragment camera2Fragment =
@@ -566,6 +568,12 @@ public abstract class CameraActivity extends AppCompatActivity
                         }
                     },
                     this,
+                    new CameraChangedListener() {
+                        @Override
+                        public void onCameraChangedListener(boolean isFrontFacing) {
+                            mRotation = isFrontFacing ? -90 : 90;
+                        }
+                    },
                     getLayoutId(),
                     getDesiredPreviewFrameSize());
         }
