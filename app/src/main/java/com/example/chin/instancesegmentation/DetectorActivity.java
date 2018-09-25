@@ -77,6 +77,12 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
             "file:///android_asset/deeplabv3_mobilenetv2_pascal_mod.pb";
     private static final int DEEPLAB_IMAGE_SIZE = 513;
 
+    // ShuffleSeg configs
+    private static final String SHUFFLESEG_MODEL_FILE = "file:///android_asset/shuffleseg_pascal.pb";
+    private static final String SHUFFLESEG_INPUT_NAME = "image_tensor";
+    private static final String[] SHUFFLESEG_OUTPUT_NAMES = { "output_mask" };
+    private static final int MAX_SIZE = 500; // Length of the longest edge.
+
     public native void process(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
     public native void bokeh(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
 
@@ -167,7 +173,13 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     private void initialiseDetectors() {
         try {
             if (mDetector == null) {
-                mDetector = DeepLab.Create(getAssets(), DEEPLAB_MODEL_FILE, "");
+                mDetector =
+                        SegmentationModel.Create(
+                                getAssets(),
+                                SHUFFLESEG_MODEL_FILE,
+                                "",
+                                SHUFFLESEG_INPUT_NAME,
+                                SHUFFLESEG_OUTPUT_NAMES);
             }
 
             if (mClassifier == null) {
@@ -271,8 +283,8 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 final int w = rgbFrameBitmapRotated.getWidth();
                 final int h = rgbFrameBitmapRotated.getHeight();
 
-                // DeepLab requires the image to be resized.
-                final float scaleFactor = (float)DEEPLAB_IMAGE_SIZE / Math.max(w, h);
+                // Resize to a smaller image for faster inference.
+                final float scaleFactor = (float)MAX_SIZE / Math.max(w, h);
                 mCropWidth = Math.round(scaleFactor * w);
                 mCropHeight = Math.round(scaleFactor * h);
 
