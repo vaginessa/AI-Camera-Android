@@ -567,7 +567,7 @@ public abstract class CameraActivity extends AppCompatActivity
                             onCaptureStillFrame(data, camera);
                         }
                     },
-                    this,
+                    null, //this,
                     new CameraChangedListener() {
                         @Override
                         public void onCameraChangedListener(boolean isFrontFacing) {

@@ -177,7 +177,9 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
             mCamera.release();
         }
 
-        mCamera.setPreviewCallbackWithBuffer(mPreviewImageListener);
+        if (mPreviewImageListener != null) {
+            mCamera.setPreviewCallbackWithBuffer(mPreviewImageListener);
+        }
         Camera.Size s = mCamera.getParameters().getPreviewSize();
         mCamera.addCallbackBuffer(new byte[ImageUtils.getYUVByteSize(s.height, s.width)]);
 

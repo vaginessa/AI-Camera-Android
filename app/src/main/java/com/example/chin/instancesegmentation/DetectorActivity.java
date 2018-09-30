@@ -156,6 +156,10 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
 
     @Override
     public void onPictureSizeChosen(final Size size, final int rotation) {
+        if (!mInitialised) {
+            initialiseDetectors();
+        }
+
         mPictureWidth = size.getWidth();
         mPictureHeight = size.getHeight();
 
@@ -211,35 +215,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     }
 
     protected void processPreview() {
-        mRgbPreviewBitmap.setPixels(
-                getRgbBytesPreview(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
-
-        final Canvas canvas = new Canvas(mCroppedPreviewBitmap);
-        canvas.drawBitmap(mRgbPreviewBitmap, mFrameToClassifyTransform, null);
-
-        runInBackground(new Runnable() {
-            @Override
-            public void run() {
-                final List<Classifier.Recognition> results = mClassifier.recognizeImage(mCroppedPreviewBitmap);
-                if (results.size() > 0) {
-                    final Classifier.Recognition result = results.get(0);
-                        runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                TextView textView = findViewById(R.id.label);
-                                if (textView != null) {
-                                    if (result.getConfidence() >= MINIMUM_CONFIDENCE) {
-                                        textView.setText(result.getTitle());
-                                    } else {
-                                        textView.setText("");
-                                    }
-                                }
-                            }
-                        });
-                }
-                readyForNextPreviewImage();
-            }
-        });
+        readyForNextPreviewImage();
     }
 
     @Override
@@ -343,6 +319,40 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 mComputingDetection = false;
             }
         });
+    }
+
+    private void RecogniseObject() {
+        /*
+        mRgbPreviewBitmap.setPixels(
+                getRgbBytesPreview(), 0, mPreviewWidth, 0, 0, mPreviewWidth, mPreviewHeight);
+
+        final Canvas canvas = new Canvas(mCroppedPreviewBitmap);
+        canvas.drawBitmap(mRgbPreviewBitmap, mFrameToClassifyTransform, null);
+
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                final List<Classifier.Recognition> results = mClassifier.recognizeImage(mCroppedPreviewBitmap);
+                if (results.size() > 0) {
+                    final Classifier.Recognition result = results.get(0);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            TextView textView = findViewById(R.id.label);
+                            if (textView != null) {
+                                if (result.getConfidence() >= MINIMUM_CONFIDENCE) {
+                                    textView.setText(result.getTitle());
+                                } else {
+                                    textView.setText("");
+                                }
+                            }
+                        }
+                    });
+                }
+                readyForNextPreviewImage();
+            }
+        });
+        */
     }
 
     private void onProcessingComplete(final String filename) {
