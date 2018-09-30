@@ -2,7 +2,6 @@ package com.example.chin.instancesegmentation;
 
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -10,6 +9,7 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.github.chrisbanes.photoview.PhotoView;
@@ -43,6 +43,26 @@ public class ImageDetailFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         mView = view;
         setViewAsync();
+
+        final ImageItem imageItem = getArguments().getParcelable(EXTRA_IMAGE);
+        ImageButton button = view.findViewById(R.id.goto_edit);
+        if (ImageManager.getInstance().hasMaskData(imageItem)) {
+
+            button.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    EditImageFragment fragment = EditImageFragment.newInstance(imageItem);
+
+                    getActivity().getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.container, fragment)
+                            .addToBackStack(null)
+                            .commit();
+                }
+            });
+        } else {
+            button.setVisibility(View.INVISIBLE);
+        }
     }
 
     public void updateFragment() {

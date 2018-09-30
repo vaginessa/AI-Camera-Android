@@ -6,22 +6,14 @@
     android:layout_height="match_parent">
 
     <com.github.chrisbanes.photoview.PhotoView xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/detail_image"
+        android:id="@+id/edit_image"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:adjustViewBounds="true"
         android:scaleType="fitCenter" />
 
-    <TextView
-        android:id="@+id/loading_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:layout_centerInParent="true"
-        android:textColor="#ffffffff" />
-
     <FrameLayout
-        android:id="@+id/detail_image_control"
+        android:id="@+id/edit_image_control"
         android:layout_width="match_parent"
         android:layout_height="112dp"
         android:layout_alignParentBottom="true"
@@ -29,7 +21,7 @@
         android:background="@color/control_background">
 
         <ImageButton
-            android:id="@+id/goto_edit"
+            android:id="@+id/bnw"
             style="@android:style/Widget.Material.Light.Button.Borderless"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
