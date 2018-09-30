@@ -6,6 +6,10 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.os.Environment;
 
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+
 import java.io.File;
 import java.io.FileOutputStream;
 
@@ -407,6 +411,30 @@ public class ImageUtils {
         int newHeight = height / inSampleSize;
 
         return Bitmap.createScaledBitmap(src, newWidth, newHeight, true);
+    }
+
+    private static native void bokeh(
+            long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight, boolean grayscale);
+
+    public static void applyMask(Bitmap src, Bitmap dst, int[] mask, int maskWidth, int maskHeight, boolean grayscale) {
+        final int w = src.getWidth();
+        final int h = src.getHeight();
+
+        Mat img = new Mat();
+        Utils.bitmapToMat(src, img);
+        Mat maskMat = new Mat(maskHeight, maskWidth, CvType.CV_32SC1);
+        Mat outImage = new Mat(img.size(), img.type());
+        maskMat.put(0, 0, mask);
+
+        // Add bokeh effect.
+        bokeh(img.getNativeObjAddr(),
+                maskMat.getNativeObjAddr(),
+                outImage.getNativeObjAddr(),
+                w,
+                h,
+                grayscale);
+
+        Utils.matToBitmap(outImage, dst);
     }
 }
 

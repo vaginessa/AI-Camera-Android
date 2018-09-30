@@ -18,11 +18,25 @@ public class ImageManager
 {
     public static final String SAVE_DIR = "tensorflow";
 
+    private class Mask {
+        public int[] mask;
+        public int maskWidth;
+        public int maskHeight;
+
+        public Mask(int[] maskArray, int maskWidth, int maskHeight) {
+            mask = maskArray;
+            this.maskWidth = maskWidth;
+            this.maskHeight = maskHeight;
+        }
+    }
+
     /**
      * List of identifiers of currently processing images.
      */
     private ArrayList<String> mPendingImages = new ArrayList<>();
     private HashMap<String, Bitmap> mCachedBitmap = new HashMap<>();
+    private HashMap<String, Bitmap> mOriginalBitmaps = new HashMap<>();
+    private HashMap<String, Mask> mMasks = new HashMap<>();
 
     private static ImageManager mInstance;
 
@@ -64,11 +78,11 @@ public class ImageManager
                             return -1 * a.getName().compareTo(b.getName());
                         }
                     });
+                }
 
-                    for (File file : files) {
-                        ImageItem item = new ImageItem(file.getName(), file.getPath());
-                        images.add(item);
-                    }
+                for (File file : files) {
+                    ImageItem item = new ImageItem(file.getName(), file.getPath());
+                    images.add(item);
                 }
             }
         }
@@ -89,17 +103,14 @@ public class ImageManager
     }
 
     public Bitmap getSmallBitmap(ImageItem imageItem, int width, int height) {
-        Bitmap bitmap =
-                ImageUtils.decodeSampledBitmapFromFile(
+        Bitmap bitmap;
+        if (mCachedBitmap.containsKey(imageItem.getTitle())) {
+            bitmap = mCachedBitmap.get(imageItem.getTitle());
+        } else {
+            bitmap = ImageUtils.decodeSampledBitmapFromFile(
                         imageItem.getPath(),
                         width,
                         height);
-
-        // If image is not in local storage then try load from cache.
-        if (bitmap == null) {
-            if (mCachedBitmap.containsKey(imageItem.getTitle())) {
-                bitmap = mCachedBitmap.get(imageItem.getTitle());
-            }
         }
 
         return bitmap;
@@ -110,12 +121,15 @@ public class ImageManager
         mCachedBitmap.put(title, null);
     }
 
-    public void cacheBitmap(String title, Bitmap bitmap) {
+    public void cacheBitmap(
+            String title, Bitmap bitmap, Bitmap originalBitmap, int[] mask, int maskWidth, int maskHeight) {
         // Only cache a scaled down version of the bitmap.
         final int width = Resources.getSystem().getDisplayMetrics().widthPixels / 2;
         final int height = Resources.getSystem().getDisplayMetrics().heightPixels / 2;
         Bitmap resizedBitmap = ImageUtils.resizeBitmapProportionally(bitmap, width, height);
         mCachedBitmap.put(title, resizedBitmap);
+        mOriginalBitmaps.put(title, originalBitmap);
+        mMasks.put(title, new Mask(mask, maskWidth, maskHeight));
     }
 
     public void saveBitmap(String title, Bitmap bitmap) {

@@ -176,13 +176,14 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process
 
 extern "C"
 {
-void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_bokeh(JNIEnv *env,
-                                                                               jobject instance,
-                                                                               jlong matAddr,
-                                                                               jlong maskAddr,
-                                                                               jlong resultAddr,
-                                                                               jint pictureWidth,
-                                                                               jint pictureHeight) {
+void JNICALL Java_com_example_chin_instancesegmentation_env_ImageUtils_bokeh(JNIEnv *env,
+                                                                             jobject instance,
+                                                                             jlong matAddr,
+                                                                             jlong maskAddr,
+                                                                             jlong resultAddr,
+                                                                             jint pictureWidth,
+                                                                             jint pictureHeight,
+                                                                             jboolean grayscale) {
     const float multiplier = 20.0f;
 
     Mat &img = *(Mat *) matAddr;
@@ -202,7 +203,10 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_bokeh(J
     //circleBlur(img, imgBlur);
     //cv::GaussianBlur(img, imgBlur, cv::Size(7, 7), 40);
     blur(img, imgBlur, cv::Size(9, 9));
-    cvtColor(imgBlur, imgBlur, COLOR_BGR2GRAY);
+
+    if (grayscale) {
+        cvtColor(imgBlur, imgBlur, COLOR_BGR2GRAY);
+    }
 
     // Do distance transform on the mask to get the amount for alpha blending.
     cv::Mat dist;

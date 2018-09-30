@@ -287,28 +287,17 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 Classifier.Recognition result = results.get(0);
                 int[] mask = result.getMask();
 
-                Mat img = new Mat();
-                Utils.bitmapToMat(rgbFrameBitmapRotated, img);
-                Mat maskMat = new Mat(mCropHeight, mCropWidth, CvType.CV_32SC1);
-                Mat outImage = new Mat(img.size(), img.type());
-                maskMat.put(0, 0, mask);
-
-                // Add bokeh effect.
-                bokeh(img.getNativeObjAddr(),
-                        maskMat.getNativeObjAddr(),
-                        outImage.getNativeObjAddr(),
-                        w,
-                        h);
-
-                Utils.matToBitmap(outImage, rgbFrameBitmapRotated);
+                Bitmap resultBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                ImageUtils.applyMask(rgbFrameBitmapRotated, resultBitmap, mask, mCropWidth, mCropHeight, false);
 
                 long mid3 = System.nanoTime();
                 long dur3 = (mid3 - mid2) / 1000000;
                 LOGGER.i("Post processing took " + dur3 + " ms");
 
-                ImageManager.getInstance().cacheBitmap(filename, rgbFrameBitmapRotated);
+                ImageManager.getInstance().cacheBitmap(
+                        filename, resultBitmap, rgbFrameBitmapRotated, mask, mCropWidth, mCropHeight);
                 onProcessingComplete(filename);
-                ImageManager.getInstance().saveBitmap(filename, rgbFrameBitmapRotated);
+                ImageManager.getInstance().saveBitmap(filename, resultBitmap);
 
                 showToast("Saved");
 
