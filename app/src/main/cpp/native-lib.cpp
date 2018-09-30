@@ -197,7 +197,11 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_bokeh(J
 
     // Blur the background.
     cv::Mat imgBlur;
-    circleBlur(img, imgBlur);
+
+    // The circleBlur function is slow. Use the built in blur for now.
+    //circleBlur(img, imgBlur);
+    //cv::GaussianBlur(img, imgBlur, cv::Size(7, 7), 40);
+    blur(img, imgBlur, cv::Size(9, 9));
     cvtColor(imgBlur, imgBlur, COLOR_BGR2GRAY);
 
     // Do distance transform on the mask to get the amount for alpha blending.
