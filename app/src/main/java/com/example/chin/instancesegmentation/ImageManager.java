@@ -9,6 +9,8 @@ import com.example.chin.instancesegmentation.env.ImageUtils;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Set;
 
@@ -53,9 +55,21 @@ public class ImageManager
         if (saveDir.isDirectory()) {
             File[] files = saveDir.listFiles();
 
-            for (int i = 0; i < files.length; ++i) {
-                ImageItem item = new ImageItem(files[i].getName(), files[i].getPath());
-                images.add(item);
+            if (files != null) {
+                if (files.length > 1) {
+                    // Sort by the timestamp in the filename. Newest first.
+                    Arrays.sort(files, new Comparator<File>() {
+                        @Override
+                        public int compare(File a, File b) {
+                            return -1 * a.getName().compareTo(b.getName());
+                        }
+                    });
+
+                    for (File file : files) {
+                        ImageItem item = new ImageItem(file.getName(), file.getPath());
+                        images.add(item);
+                    }
+                }
             }
         }
 
