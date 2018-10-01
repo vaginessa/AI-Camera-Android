@@ -7,20 +7,14 @@ import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.media.ImageReader;
-
 import android.util.Size;
-import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.chin.instancesegmentation.env.ImageUtils;
+import com.example.chin.instancesegmentation.env.Logger;
 
 import java.io.IOException;
 import java.util.List;
-
-import com.example.chin.instancesegmentation.env.Logger;
-import com.example.chin.instancesegmentation.env.ImageUtils;
-
-import org.opencv.android.Utils;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
 
 public class DetectorActivity extends CameraActivity implements ImageReader.OnImageAvailableListener {
     private static final Logger LOGGER = new Logger();
@@ -83,9 +77,9 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     private static final String[] SHUFFLESEG_OUTPUT_NAMES = { "output_mask" };
     private static final int MAX_SIZE = 500; // Length of the longest edge.
 
-    public native void process(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
-    public native void bokeh(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
-
+    // Default post processing settings.
+    private final int mBlurAmount = 9;
+    private final boolean mGrayscale = true;
 
     @Override
     public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -294,8 +288,9 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 long dur3 = (mid3 - mid2) / 1000000;
                 LOGGER.i("Post processing took " + dur3 + " ms");
 
-                ImageManager.getInstance().cacheBitmap(
-                        filename, resultBitmap, rgbFrameBitmapRotated, mask, mCropWidth, mCropHeight);
+                ImageManager.getInstance().cacheBitmap(filename, resultBitmap);
+                ImageData imageData = new ImageData(rgbFrameBitmapRotated, mask, mCropWidth, mCropHeight, mBlurAmount, mGrayscale);
+                ImageManager.getInstance().storeImageData(filename, imageData);
                 onProcessingComplete(filename);
                 ImageManager.getInstance().saveBitmap(filename, resultBitmap);
 

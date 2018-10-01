@@ -18,25 +18,12 @@ public class ImageManager
 {
     public static final String SAVE_DIR = "tensorflow";
 
-    private class Mask {
-        public int[] mask;
-        public int maskWidth;
-        public int maskHeight;
-
-        public Mask(int[] maskArray, int maskWidth, int maskHeight) {
-            mask = maskArray;
-            this.maskWidth = maskWidth;
-            this.maskHeight = maskHeight;
-        }
-    }
-
     /**
      * List of identifiers of currently processing images.
      */
     private ArrayList<String> mPendingImages = new ArrayList<>();
     private HashMap<String, Bitmap> mCachedBitmap = new HashMap<>();
-    private HashMap<String, Bitmap> mOriginalBitmaps = new HashMap<>();
-    private HashMap<String, Mask> mMasks = new HashMap<>();
+    private HashMap<String, ImageData> mImageDataMap = new HashMap<>();
 
     private static ImageManager mInstance;
 
@@ -121,15 +108,16 @@ public class ImageManager
         mCachedBitmap.put(title, null);
     }
 
-    public void cacheBitmap(
-            String title, Bitmap bitmap, Bitmap originalBitmap, int[] mask, int maskWidth, int maskHeight) {
+    public void cacheBitmap( String title, Bitmap bitmap) {
         // Only cache a scaled down version of the bitmap.
         final int width = Resources.getSystem().getDisplayMetrics().widthPixels / 2;
         final int height = Resources.getSystem().getDisplayMetrics().heightPixels / 2;
         Bitmap resizedBitmap = ImageUtils.resizeBitmapProportionally(bitmap, width, height);
         mCachedBitmap.put(title, resizedBitmap);
-        mOriginalBitmaps.put(title, originalBitmap);
-        mMasks.put(title, new Mask(mask, maskWidth, maskHeight));
+    }
+
+    public void storeImageData(String title, ImageData imageData) {
+        mImageDataMap.put(title, imageData);
     }
 
     public void saveBitmap(String title, Bitmap bitmap) {
@@ -148,10 +136,10 @@ public class ImageManager
     }
 
     public boolean hasMaskData(ImageItem item) {
-        String title = item.getTitle();
-        return mOriginalBitmaps.containsKey(title) && mMasks.containsKey(title);
+        return mImageDataMap.containsKey(item.getTitle());
     }
 
+    /*
     public void reprocessImage(ImageItem item, boolean grayscale) {
         String title = item.getTitle();
         Bitmap original = null;
@@ -177,4 +165,5 @@ public class ImageManager
         Bitmap resizedBitmap = ImageUtils.resizeBitmapProportionally(result, width, height);
         mCachedBitmap.put(title, resizedBitmap);
     }
+    */
 }
