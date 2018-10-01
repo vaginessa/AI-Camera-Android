@@ -282,7 +282,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 int[] mask = result.getMask();
 
                 Bitmap resultBitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-                ImageUtils.applyMask(rgbFrameBitmapRotated, resultBitmap, mask, mCropWidth, mCropHeight, false);
+                ImageUtils.applyMask(rgbFrameBitmapRotated, resultBitmap, mask, mCropWidth, mCropHeight, mBlurAmount, mGrayscale);
 
                 long mid3 = System.nanoTime();
                 long dur3 = (mid3 - mid2) / 1000000;

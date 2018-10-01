@@ -414,9 +414,9 @@ public class ImageUtils {
     }
 
     private static native void bokeh(
-            long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight, boolean grayscale);
+            long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight, int blurAmount, boolean grayscale);
 
-    public static void applyMask(Bitmap src, Bitmap dst, int[] mask, int maskWidth, int maskHeight, boolean grayscale) {
+    public static void applyMask(Bitmap src, Bitmap dst, int[] mask, int maskWidth, int maskHeight, int blurAmount, boolean grayscale) {
         final int w = src.getWidth();
         final int h = src.getHeight();
 
@@ -432,6 +432,7 @@ public class ImageUtils {
                 outImage.getNativeObjAddr(),
                 w,
                 h,
+                blurAmount,
                 grayscale);
 
         Utils.matToBitmap(outImage, dst);
