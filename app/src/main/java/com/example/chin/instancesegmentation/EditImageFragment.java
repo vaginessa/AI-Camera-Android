@@ -3,14 +3,15 @@ package com.example.chin.instancesegmentation;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
+import android.widget.SeekBar;
 
+import com.example.chin.instancesegmentation.env.ImageUtils;
 import com.github.chrisbanes.photoview.PhotoView;
 
 
@@ -23,6 +24,28 @@ public class EditImageFragment extends Fragment {
     private static final String EXTRA_IMAGE = "image_item";
 
     private ImageItem mImageItem;
+    private ImageData mImageData;
+    private Bitmap mProcessedBitmap;
+    private PhotoView mPhotoView;
+
+    private final int MAX_BLUR = 16;
+
+    private final SeekBar.OnSeekBarChangeListener mSeekBarChangedListener = new SeekBar.OnSeekBarChangeListener() {
+        @Override
+        public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+            if (fromUser) {
+                // Blur amount must be an odd number.
+                mImageData.setBlurAmount(2 * progress + 1);
+                processImage();
+            }
+        }
+
+        @Override
+        public void onStartTrackingTouch(SeekBar seekBar) {}
+
+        @Override
+        public void onStopTrackingTouch(SeekBar seekBar) {}
+    };
 
     public EditImageFragment() {}
 
@@ -46,6 +69,8 @@ public class EditImageFragment extends Fragment {
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             mImageItem = getArguments().getParcelable(EXTRA_IMAGE);
+            mImageData = ImageManager.getInstance().getImageData(mImageItem.getTitle());
+            // TODO handle null ImageData
         }
     }
 
@@ -60,11 +85,32 @@ public class EditImageFragment extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        setImage(view);
+        mPhotoView = view.findViewById(R.id.edit_image);
+        setImage();
+
+        SeekBar blurControl = view.findViewById(R.id.blur_control_seekbar);
+        blurControl.setMax(MAX_BLUR);
+        blurControl.setProgress((mImageData.getBlurAmount() - 1) / 2);
+        blurControl.setOnSeekBarChangeListener(mSeekBarChangedListener);
 
         ImageButton button = view.findViewById(R.id.bnw);
-    }
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                mImageData.toggleGrayscale();
+                processImage();
+            }
+        });
 
+        ImageButton saveButton = view.findViewById(R.id.confirm_change);
+        saveButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ImageManager.getInstance().saveBitmap(mImageItem.getTitle(), mProcessedBitmap);
+                getActivity().getSupportFragmentManager().popBackStackImmediate();
+            }
+        });
+    }
 
     @Override
     public void onAttach(Context context) {
@@ -76,12 +122,27 @@ public class EditImageFragment extends Fragment {
         super.onDetach();
     }
 
-    private void setImage(View view) {
+    private void setImage() {
         final int width = Resources.getSystem().getDisplayMetrics().widthPixels / 2;
         final int height = Resources.getSystem().getDisplayMetrics().heightPixels / 2;
-        final PhotoView photoView = view.findViewById(R.id.edit_image);
+        Bitmap bitmap = ImageManager.getInstance().getSmallBitmap(mImageItem, width, height);
+        mPhotoView.setImageBitmap(bitmap);
+    }
 
-        final Bitmap bitmap = ImageManager.getInstance().getSmallBitmap(mImageItem, width, height);
-        photoView.setImageBitmap(bitmap);
+    private void processImage() {
+        Bitmap original = mImageData.getOriginalImage();
+        if (mProcessedBitmap == null) {
+            mProcessedBitmap = Bitmap.createBitmap(original.getWidth(), original.getHeight(), Bitmap.Config.ARGB_8888);
+        }
+        ImageUtils.applyMask(original,
+                mProcessedBitmap,
+                mImageData.getMask(),
+                mImageData.getMaskWidth(),
+                mImageData.getMaskHeight(),
+                mImageData.getBlurAmount(),
+                mImageData.isGrayscale());
+
+        ImageManager.getInstance().cacheBitmap(mImageItem.getTitle(), mProcessedBitmap);
+        setImage();
     }
 }

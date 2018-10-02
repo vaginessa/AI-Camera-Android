@@ -139,31 +139,7 @@ public class ImageManager
         return mImageDataMap.containsKey(item.getTitle());
     }
 
-    /*
-    public void reprocessImage(ImageItem item, boolean grayscale) {
-        String title = item.getTitle();
-        Bitmap original = null;
-        Mask mask = null;
-        if (mOriginalBitmaps.containsKey(title)) {
-            original = mOriginalBitmaps.get(title);
-        }
-
-        if (mMasks.containsKey(title)) {
-            mask = mMasks.get(title);
-        }
-
-        if (mask == null || original == null) {
-            return;
-        }
-
-        Bitmap result = Bitmap.createBitmap(original.getWidth(), original.getHeight(), Bitmap.Config.ARGB_8888);
-
-        ImageUtils.applyMask(original, result, mask.mask, mask.maskWidth, mask.maskHeight, grayscale);
-
-        final int width = Resources.getSystem().getDisplayMetrics().widthPixels / 2;
-        final int height = Resources.getSystem().getDisplayMetrics().heightPixels / 2;
-        Bitmap resizedBitmap = ImageUtils.resizeBitmapProportionally(result, width, height);
-        mCachedBitmap.put(title, resizedBitmap);
+    public ImageData getImageData(String title) {
+        return mImageDataMap.get(title);
     }
-    */
 }

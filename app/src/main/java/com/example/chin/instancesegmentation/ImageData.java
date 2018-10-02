@@ -81,4 +81,8 @@ public class ImageData
     {
         this.mGrayscale = mGrayscale;
     }
+
+    public void toggleGrayscale() {
+        mGrayscale = !mGrayscale;
+    }
 }
