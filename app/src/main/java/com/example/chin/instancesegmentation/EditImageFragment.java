@@ -27,6 +27,7 @@ public class EditImageFragment extends Fragment {
     private ImageData mImageData;
     private Bitmap mProcessedBitmap;
     private PhotoView mPhotoView;
+    private ImageButton mSaveButton;
 
     private final int MAX_BLUR = 16;
 
@@ -102,14 +103,15 @@ public class EditImageFragment extends Fragment {
             }
         });
 
-        ImageButton saveButton = view.findViewById(R.id.confirm_change);
-        saveButton.setOnClickListener(new View.OnClickListener() {
+        mSaveButton = view.findViewById(R.id.confirm_change);
+        mSaveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 ImageManager.getInstance().saveBitmap(mImageItem.getTitle(), mProcessedBitmap);
                 getActivity().getSupportFragmentManager().popBackStackImmediate();
             }
         });
+        mSaveButton.setEnabled(false);
     }
 
     @Override
@@ -144,5 +146,6 @@ public class EditImageFragment extends Fragment {
 
         ImageManager.getInstance().cacheBitmap(mImageItem.getTitle(), mProcessedBitmap);
         setImage();
+        mSaveButton.setEnabled(true);
     }
 }
