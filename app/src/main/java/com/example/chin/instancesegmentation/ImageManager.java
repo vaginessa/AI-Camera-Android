@@ -4,6 +4,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
+import android.util.Size;
 
 import com.example.chin.instancesegmentation.env.ImageUtils;
 
@@ -25,11 +26,16 @@ public class ImageManager
     private HashMap<String, Bitmap> mCachedBitmap = new HashMap<>();
     private HashMap<String, ImageData> mImageDataMap = new HashMap<>();
 
+    private Size mPreferredImageSize;
+
     private static ImageManager mInstance;
 
     public static ImageManager getInstance() {
         if (mInstance == null) {
             mInstance = new ImageManager();
+            mInstance.mPreferredImageSize = new Size(
+                    Resources.getSystem().getDisplayMetrics().widthPixels / 2,
+                    Resources.getSystem().getDisplayMetrics().heightPixels / 2);
         }
         return mInstance;
     }
@@ -38,6 +44,10 @@ public class ImageManager
         return Environment.getExternalStorageDirectory().getAbsolutePath()
                 + File.separator
                 + SAVE_DIR;
+    }
+
+    public static Size getPreferredImageSize() {
+        return mInstance.mPreferredImageSize;
     }
 
     /**
