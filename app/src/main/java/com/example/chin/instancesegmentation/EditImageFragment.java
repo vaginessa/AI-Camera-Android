@@ -28,6 +28,7 @@ public class EditImageFragment extends Fragment {
     private Bitmap mProcessedBitmap;
     private PhotoView mPhotoView;
     private ImageButton mSaveButton;
+    private RunInBackgroundListener mBackgroundRunner;
 
     private final int MAX_BLUR = 16;
 
@@ -107,7 +108,20 @@ public class EditImageFragment extends Fragment {
         mSaveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ImageManager.getInstance().saveBitmap(mImageItem.getTitle(), mProcessedBitmap);
+                mBackgroundRunner.run(new Runnable() {
+                    @Override
+                    public void run() {
+                        Bitmap result = Bitmap.createBitmap(mImageData.getOriginalImage());
+                        ImageUtils.applyMask(mImageData.getOriginalImage(),
+                                result,
+                                mImageData.getMask(),
+                                mImageData.getMaskWidth(),
+                                mImageData.getMaskHeight(),
+                                mImageData.getBlurAmount(),
+                                mImageData.isGrayscale());
+                        ImageManager.getInstance().saveBitmap(mImageItem.getTitle(), result);
+                    }
+                });
                 getActivity().getSupportFragmentManager().popBackStackImmediate();
             }
         });
@@ -117,11 +131,18 @@ public class EditImageFragment extends Fragment {
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
+        if (context instanceof RunInBackgroundListener) {
+            mBackgroundRunner = (RunInBackgroundListener) context;
+        } else {
+            throw new RuntimeException(context.toString()
+                    + " must implement RunInBackgroundListener");
+        }
     }
 
     @Override
     public void onDetach() {
         super.onDetach();
+        mBackgroundRunner = null;
     }
 
     private void setImage() {

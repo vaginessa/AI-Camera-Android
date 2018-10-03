@@ -56,7 +56,8 @@ public abstract class CameraActivity extends AppCompatActivity
         implements
             OnImageAvailableListener,
             Camera.PreviewCallback,
-            CameraFragment.OnCameraButtonClickedListener {
+            CameraFragment.OnCameraButtonClickedListener,
+            RunInBackgroundListener {
 
     private static final Logger LOGGER = new Logger();
 
@@ -453,6 +454,11 @@ public abstract class CameraActivity extends AppCompatActivity
                 */
                 break;
         }
+    }
+
+    @Override
+    public void run(Runnable runnable) {
+        runInBackground(runnable);
     }
 
     private boolean hasPermission() {

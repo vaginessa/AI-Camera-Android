@@ -229,9 +229,6 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
 
                 mRgbFrameBitmap.recycle();
 
-                final int originalWidth = mOriginalBitmap.getWidth();
-                final int originalHeight = mOriginalBitmap.getHeight();
-
                 // Resize to a smaller image for faster post processing. The size is large enough to
                 // still look good for the resolution of the screen.
                 mDisplayBitmap = Bitmap.createScaledBitmap(mOriginalBitmap, mDisplayWidth, mDisplayHeight, true);
@@ -268,8 +265,8 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 ImageManager.getInstance().storeImageData(filename, imageData);
                 onProcessingComplete(filename);
 
-                // TODO process and save the large version in the background.
-                ImageManager.getInstance().saveBitmap(filename, mDisplayBitmap);
+                ImageUtils.applyMask(mOriginalBitmap, mOriginalBitmap, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
+                ImageManager.getInstance().saveBitmap(filename, mOriginalBitmap);
 
                 showToast("Saved");
 
