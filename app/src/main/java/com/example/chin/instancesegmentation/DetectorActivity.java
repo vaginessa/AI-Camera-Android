@@ -120,7 +120,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 (float)Math.max(mPictureWidth, mPictureHeight);
 
         mDisplayWidth = Math.round(scaleFactor * mPictureWidth);
-        mDisplayHeight = Math.round(scaleFactor * mDisplayHeight);
+        mDisplayHeight = Math.round(scaleFactor * mPictureHeight);
 
         if (Math.abs(rotation) == 90) {
             int temp = mDisplayHeight;
@@ -257,7 +257,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 Classifier.Recognition result = results.get(0);
                 int[] mask = result.getMask();
 
-                ImageUtils.applyMask(mOriginalBitmap, mOriginalBitmap, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
+                ImageUtils.applyMask(mDisplayBitmap, mDisplayBitmap, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
 
                 long mid3 = System.nanoTime();
                 long dur3 = (mid3 - mid2) / 1000000;

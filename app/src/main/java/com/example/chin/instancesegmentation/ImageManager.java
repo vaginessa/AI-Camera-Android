@@ -47,7 +47,7 @@ public class ImageManager
     }
 
     public static Size getPreferredImageSize() {
-        return mInstance.mPreferredImageSize;
+        return getInstance().mPreferredImageSize;
     }
 
     /**
@@ -119,11 +119,7 @@ public class ImageManager
     }
 
     public void cacheBitmap( String title, Bitmap bitmap) {
-        // Only cache a scaled down version of the bitmap.
-        final int width = Resources.getSystem().getDisplayMetrics().widthPixels / 2;
-        final int height = Resources.getSystem().getDisplayMetrics().heightPixels / 2;
-        Bitmap resizedBitmap = ImageUtils.resizeBitmapProportionally(bitmap, width, height);
-        mCachedBitmap.put(title, resizedBitmap);
+        mCachedBitmap.put(title, bitmap);
     }
 
     public void storeImageData(String title, ImageData imageData) {

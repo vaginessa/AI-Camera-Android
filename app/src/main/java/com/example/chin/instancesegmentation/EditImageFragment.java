@@ -1,10 +1,10 @@
 package com.example.chin.instancesegmentation;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -125,18 +125,16 @@ public class EditImageFragment extends Fragment {
     }
 
     private void setImage() {
-        final int width = Resources.getSystem().getDisplayMetrics().widthPixels / 2;
-        final int height = Resources.getSystem().getDisplayMetrics().heightPixels / 2;
-        Bitmap bitmap = ImageManager.getInstance().getSmallBitmap(mImageItem, width, height);
-        mPhotoView.setImageBitmap(bitmap);
+        Size size = ImageManager.getPreferredImageSize();
+        mProcessedBitmap = ImageManager.getInstance().getSmallBitmap(mImageItem, size.getWidth(), size.getHeight());
+        mPhotoView.setImageBitmap(mProcessedBitmap);
     }
 
     private void processImage() {
-        Bitmap original = mImageData.getOriginalImage();
-        if (mProcessedBitmap == null) {
-            mProcessedBitmap = Bitmap.createBitmap(original.getWidth(), original.getHeight(), Bitmap.Config.ARGB_8888);
-        }
-        ImageUtils.applyMask(original,
+        Bitmap image = Bitmap.createScaledBitmap(
+                mImageData.getOriginalImage(), mProcessedBitmap.getWidth(), mProcessedBitmap.getHeight(), true);
+
+        ImageUtils.applyMask(image,
                 mProcessedBitmap,
                 mImageData.getMask(),
                 mImageData.getMaskWidth(),
