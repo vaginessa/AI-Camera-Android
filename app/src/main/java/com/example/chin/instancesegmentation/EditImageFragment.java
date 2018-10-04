@@ -32,13 +32,17 @@ public class EditImageFragment extends Fragment {
 
     private final int MAX_BLUR = 16;
 
+    // Current settings.
+    private int mBlurAmount;
+    private boolean mIsGrayscale;
+
     private final SeekBar.OnSeekBarChangeListener mSeekBarChangedListener = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
             if (fromUser) {
                 // Blur amount must be an odd number.
-                mImageData.setBlurAmount(2 * progress + 1);
-                processImage();
+                mBlurAmount = 2 * progress + 1;
+                processImage(mBlurAmount, mIsGrayscale);
             }
         }
 
@@ -72,6 +76,8 @@ public class EditImageFragment extends Fragment {
         if (getArguments() != null) {
             mImageItem = getArguments().getParcelable(EXTRA_IMAGE);
             mImageData = ImageManager.getInstance().getImageData(mImageItem.getTitle());
+            mIsGrayscale = mImageData.isGrayscale();
+            mBlurAmount = mImageData.getBlurAmount();
             // TODO handle null ImageData
         }
     }
@@ -88,7 +94,9 @@ public class EditImageFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mPhotoView = view.findViewById(R.id.edit_image);
-        setImage();
+        Size size = ImageManager.getPreferredImageSize();
+        mProcessedBitmap = ImageManager.getInstance().getSmallBitmap(mImageItem, size.getWidth(), size.getHeight());
+        mPhotoView.setImageBitmap(mProcessedBitmap);
 
         SeekBar blurControl = view.findViewById(R.id.blur_control_seekbar);
         blurControl.setMax(MAX_BLUR);
@@ -99,8 +107,8 @@ public class EditImageFragment extends Fragment {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mImageData.toggleGrayscale();
-                processImage();
+                mIsGrayscale = !mImageData.isGrayscale();
+                processImage(mBlurAmount, mIsGrayscale);
             }
         });
 
@@ -108,6 +116,10 @@ public class EditImageFragment extends Fragment {
         mSaveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mImageData.setGrayscale(mIsGrayscale);
+                mImageData.setBlurAmount(mBlurAmount);
+                ImageManager.getInstance().cacheBitmap(mImageItem.getTitle(), mProcessedBitmap);
+
                 mBackgroundRunner.run(new Runnable() {
                     @Override
                     public void run() {
@@ -145,13 +157,7 @@ public class EditImageFragment extends Fragment {
         mBackgroundRunner = null;
     }
 
-    private void setImage() {
-        Size size = ImageManager.getPreferredImageSize();
-        mProcessedBitmap = ImageManager.getInstance().getSmallBitmap(mImageItem, size.getWidth(), size.getHeight());
-        mPhotoView.setImageBitmap(mProcessedBitmap);
-    }
-
-    private void processImage() {
+    private void processImage(int blurAmount, boolean grayscale) {
         Bitmap image = Bitmap.createScaledBitmap(
                 mImageData.getOriginalImage(), mProcessedBitmap.getWidth(), mProcessedBitmap.getHeight(), true);
 
@@ -160,11 +166,10 @@ public class EditImageFragment extends Fragment {
                 mImageData.getMask(),
                 mImageData.getMaskWidth(),
                 mImageData.getMaskHeight(),
-                mImageData.getBlurAmount(),
-                mImageData.isGrayscale());
+                blurAmount,
+                grayscale);
 
-        ImageManager.getInstance().cacheBitmap(mImageItem.getTitle(), mProcessedBitmap);
-        setImage();
+        mPhotoView.setImageBitmap(mProcessedBitmap);
         mSaveButton.setEnabled(true);
     }
 }
