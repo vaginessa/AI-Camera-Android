@@ -95,7 +95,8 @@ public class EditImageFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         mPhotoView = view.findViewById(R.id.edit_image);
         Size size = ImageManager.getPreferredImageSize();
-        mProcessedBitmap = ImageManager.getInstance().getSmallBitmap(mImageItem, size.getWidth(), size.getHeight());
+        Bitmap cached = ImageManager.getInstance().getSmallBitmap(mImageItem, size.getWidth(), size.getHeight());
+        mProcessedBitmap = Bitmap.createBitmap(cached);
         mPhotoView.setImageBitmap(mProcessedBitmap);
 
         SeekBar blurControl = view.findViewById(R.id.blur_control_seekbar);
