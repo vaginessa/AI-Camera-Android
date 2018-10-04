@@ -17,6 +17,7 @@ import com.github.chrisbanes.photoview.PhotoView;
 public class ImageDetailFragment extends Fragment {
     private static final String EXTRA_IMAGE = "image_item";
     private View mView;
+    private ImageButton mEditButton;
 
     public ImageDetailFragment() { }
 
@@ -45,24 +46,8 @@ public class ImageDetailFragment extends Fragment {
         setViewAsync();
 
         final ImageItem imageItem = getArguments().getParcelable(EXTRA_IMAGE);
-        ImageButton button = view.findViewById(R.id.goto_edit);
-        if (ImageManager.getInstance().hasMaskData(imageItem)) {
-
-            button.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    EditImageFragment fragment = EditImageFragment.newInstance(imageItem);
-
-                    getActivity().getSupportFragmentManager()
-                            .beginTransaction()
-                            .replace(R.id.container, fragment)
-                            .addToBackStack(null)
-                            .commit();
-                }
-            });
-        } else {
-            button.setVisibility(View.INVISIBLE);
-        }
+        mEditButton = view.findViewById(R.id.goto_edit);
+        toggleEditButton(imageItem);
     }
 
     public void updateFragment() {
@@ -85,6 +70,7 @@ public class ImageDetailFragment extends Fragment {
                 } else {
                     textView.setText("");
                     photoView.setImageBitmap(bitmap);
+                    toggleEditButton(imageItem);
                 }
             }
         };
@@ -100,5 +86,25 @@ public class ImageDetailFragment extends Fragment {
         };
 
         thread.start();
+    }
+
+    private void toggleEditButton(final ImageItem imageItem) {
+        if (ImageManager.getInstance().hasMaskData(imageItem)) {
+            mEditButton.setVisibility(View.VISIBLE);
+            mEditButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    EditImageFragment fragment = EditImageFragment.newInstance(imageItem);
+
+                    getActivity().getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.container, fragment)
+                            .addToBackStack(null)
+                            .commit();
+                }
+            });
+        } else {
+            mEditButton.setVisibility(View.INVISIBLE);
+        }
     }
 }
