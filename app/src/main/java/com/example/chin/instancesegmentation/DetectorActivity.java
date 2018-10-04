@@ -191,13 +191,10 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     protected void processImage() {
         LOGGER.i("Process still");
 
-        final Long timeStamp = System.currentTimeMillis();
-        final String filename = "IMG_" + timeStamp.toString() + ".png";
-        ImageManager.getInstance().addPendingImage(filename);
-
         runInBackground(new Runnable() {
             @Override
             public void run() {
+                final String filename = mFilename;
 
                 /*
                 mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.nayeon);

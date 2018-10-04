@@ -90,6 +90,7 @@ public abstract class CameraActivity extends AppCompatActivity
     private Runnable mPreviewImageConverter;
 
     private int mRotation = 90;
+    protected String mFilename;
 
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -201,6 +202,10 @@ public abstract class CameraActivity extends AppCompatActivity
         if (mIsProcessingFrame) {
             return;
         }
+
+        final Long timeStamp = System.currentTimeMillis();
+        mFilename = "IMG_" + timeStamp.toString() + ".png";
+        ImageManager.getInstance().addPendingImage(mFilename);
 
         mIsProcessingFrame = true;
 
