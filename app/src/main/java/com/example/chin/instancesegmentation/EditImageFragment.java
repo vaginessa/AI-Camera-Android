@@ -108,7 +108,7 @@ public class EditImageFragment extends Fragment {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                mIsGrayscale = !mImageData.isGrayscale();
+                mIsGrayscale = !mIsGrayscale;
                 processImage(mBlurAmount, mIsGrayscale);
             }
         });

@@ -262,8 +262,9 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 ImageManager.getInstance().storeImageData(filename, imageData);
                 onProcessingComplete(filename);
 
-                ImageUtils.applyMask(mOriginalBitmap, mOriginalBitmap, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
-                ImageManager.getInstance().saveBitmap(filename, mOriginalBitmap);
+                Bitmap finalResult = Bitmap.createBitmap(mOriginalBitmap.getWidth(), mOriginalBitmap.getHeight(), Bitmap.Config.ARGB_8888);
+                ImageUtils.applyMask(mOriginalBitmap, finalResult, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
+                ImageManager.getInstance().saveBitmap(filename, finalResult);
 
                 showToast("Saved");
 
@@ -271,6 +272,8 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 long dur4 = (mid4 - mid3) / 1000000;
                 LOGGER.i("Saving to file took " + dur4 + " ms");
 
+                finalResult.recycle();
+                mInferenceBitmap.recycle();
                 mComputingDetection = false;
             }
         });
