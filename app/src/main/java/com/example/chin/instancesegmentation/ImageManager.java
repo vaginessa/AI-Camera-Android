@@ -17,7 +17,11 @@ import java.util.Set;
 
 public class ImageManager
 {
-    public static final String SAVE_DIR = "tensorflow";
+    public static final String SAVE_PATH =
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                .getAbsolutePath()
+                    + File.separator
+                    + "Segmentation";
 
     /**
      * List of identifiers of currently processing images.
@@ -40,12 +44,6 @@ public class ImageManager
         return mInstance;
     }
 
-    public static String getSavePath() {
-        return Environment.getExternalStorageDirectory().getAbsolutePath()
-                + File.separator
-                + SAVE_DIR;
-    }
-
     public static Size getPreferredImageSize() {
         return getInstance().mPreferredImageSize;
     }
@@ -56,7 +54,7 @@ public class ImageManager
      */
     public ArrayList<ImageItem> getImageItems() {
         ArrayList<ImageItem> images = new ArrayList<>();
-        File saveDir = new File(getSavePath());
+        File saveDir = new File(SAVE_PATH);
 
         for (String title : mCachedBitmap.keySet()) {
             ImageItem item = new ImageItem(title, null);
@@ -128,7 +126,7 @@ public class ImageManager
 
     public void saveBitmap(String title, Bitmap bitmap) {
         // Use the title as the filename.
-        ImageUtils.saveBitmap(bitmap, title);
+        ImageUtils.saveBitmap(bitmap, SAVE_PATH, title);
         mPendingImages.remove(title);
     }
 

@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.os.Environment;
 
+import com.example.chin.instancesegmentation.ImageManager;
+
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -49,18 +51,17 @@ public class ImageUtils {
      * @param bitmap The bitmap to save.
      */
     public static void saveBitmap(final Bitmap bitmap) {
-        saveBitmap(bitmap, "preview.png");
+        saveBitmap(bitmap, ImageManager.SAVE_PATH, "preview.png");
     }
 
     /**
      * Saves a Bitmap object to disk for analysis.
      *
      * @param bitmap The bitmap to save.
-     * @param filename The location to save the bitmap to.
+     * @param root The location to save the bitmap to.
+     * @param filename The name of the file.
      */
-    public static void saveBitmap(final Bitmap bitmap, final String filename) {
-        final String root =
-                Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "tensorflow";
+    public static void saveBitmap(final Bitmap bitmap, final String root, final String filename) {
         LOGGER.i("Saving %dx%d bitmap to %s.", bitmap.getWidth(), bitmap.getHeight(), root);
         final File myDir = new File(root);
 

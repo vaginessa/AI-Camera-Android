@@ -262,11 +262,9 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 ImageManager.getInstance().storeImageData(filename, imageData);
                 onProcessingComplete(filename);
 
-                Bitmap finalResult = Bitmap.createBitmap(mOriginalBitmap.getWidth(), mOriginalBitmap.getHeight(), Bitmap.Config.ARGB_8888);
+                Bitmap finalResult = Bitmap.createBitmap(mOriginalBitmap);
                 ImageUtils.applyMask(mOriginalBitmap, finalResult, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
                 ImageManager.getInstance().saveBitmap(filename, finalResult);
-
-                showToast("Saved");
 
                 long mid4 = System.nanoTime();
                 long dur4 = (mid4 - mid3) / 1000000;
