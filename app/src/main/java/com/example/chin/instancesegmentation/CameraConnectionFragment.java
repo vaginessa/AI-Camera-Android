@@ -408,8 +408,6 @@ public class CameraConnectionFragment extends CameraFragment {
         } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
-
-        ImageManager.getInstance().clearCachedBitmap();
     }
 
     @Override

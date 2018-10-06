@@ -127,6 +127,7 @@ public class ImageManager
         // Use the title as the filename.
         ImageUtils.saveBitmap(bitmap, SAVE_PATH, title);
         mPendingImages.remove(title);
+        mCachedBitmap.remove(title);
     }
 
     public void deleteBitmap(ImageItem imageItem) {
@@ -135,15 +136,6 @@ public class ImageManager
         mPendingImages.remove(title);
         mCachedBitmap.remove(title);
         mImageDataMap.remove(title);
-    }
-
-    public void clearCachedBitmap() {
-        Set<String> titles = mCachedBitmap.keySet();
-        for (String title : titles) {
-            if (!mPendingImages.contains(title)) {
-                mCachedBitmap.remove(title);
-            }
-        }
     }
 
     public boolean hasMaskData(ImageItem item) {
