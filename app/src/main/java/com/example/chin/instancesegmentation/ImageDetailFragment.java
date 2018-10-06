@@ -2,7 +2,6 @@ package com.example.chin.instancesegmentation;
 
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -10,20 +9,26 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.github.chrisbanes.photoview.PhotoView;
 
 public class ImageDetailFragment extends Fragment {
     private static final String EXTRA_IMAGE = "image_item";
+    private static final String ON_DELETE = "on_delete";
     private View mView;
+    private ImageButton mEditButton;
+    private ImageButton mDeleteButton;
+    private OnDeleteImageListener mOnDelete;
 
     public ImageDetailFragment() { }
 
-    public static ImageDetailFragment newInstance(ImageItem imageItem) {
+    public static ImageDetailFragment newInstance(ImageItem imageItem, OnDeleteImageListener onDelete) {
         ImageDetailFragment fragment = new ImageDetailFragment();
         Bundle args = new Bundle();
         args.putParcelable(EXTRA_IMAGE, imageItem);
+        args.putParcelable(ON_DELETE, onDelete);
         fragment.setArguments(args);
         return fragment;
     }
@@ -42,6 +47,22 @@ public class ImageDetailFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mView = view;
+
+        final ImageItem imageItem = getArguments().getParcelable(EXTRA_IMAGE);
+        mOnDelete = getArguments().getParcelable(ON_DELETE);
+        mEditButton = view.findViewById(R.id.goto_edit);
+        toggleEditButton(imageItem);
+
+        mDeleteButton = view.findViewById(R.id.image_detail_delete);
+        mDeleteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ImageManager.getInstance().deleteBitmap(imageItem);
+                mOnDelete.onDeleteImage(imageItem);
+            }
+        });
+        mDeleteButton.setVisibility(View.INVISIBLE);
+
         setViewAsync();
     }
 
@@ -65,6 +86,8 @@ public class ImageDetailFragment extends Fragment {
                 } else {
                     textView.setText("");
                     photoView.setImageBitmap(bitmap);
+                    toggleEditButton(imageItem);
+                    mDeleteButton.setVisibility(View.VISIBLE);
                 }
             }
         };
@@ -80,5 +103,25 @@ public class ImageDetailFragment extends Fragment {
         };
 
         thread.start();
+    }
+
+    private void toggleEditButton(final ImageItem imageItem) {
+        if (ImageManager.getInstance().hasMaskData(imageItem)) {
+            mEditButton.setVisibility(View.VISIBLE);
+            mEditButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    EditImageFragment fragment = EditImageFragment.newInstance(imageItem);
+
+                    getActivity().getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.container, fragment)
+                            .addToBackStack(null)
+                            .commit();
+                }
+            });
+        } else {
+            mEditButton.setVisibility(View.INVISIBLE);
+        }
     }
 }

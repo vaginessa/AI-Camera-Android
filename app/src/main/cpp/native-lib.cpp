@@ -176,14 +176,16 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process
 
 extern "C"
 {
-void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_bokeh(JNIEnv *env,
-                                                                               jobject instance,
-                                                                               jlong matAddr,
-                                                                               jlong maskAddr,
-                                                                               jlong resultAddr,
-                                                                               jint pictureWidth,
-                                                                               jint pictureHeight) {
-    const float multiplier = 20.0f;
+void JNICALL Java_com_example_chin_instancesegmentation_env_ImageUtils_bokeh(JNIEnv *env,
+                                                                             jobject instance,
+                                                                             jlong matAddr,
+                                                                             jlong maskAddr,
+                                                                             jlong resultAddr,
+                                                                             jint pictureWidth,
+                                                                             jint pictureHeight,
+                                                                             jint blurAmount,
+                                                                             jboolean grayscale) {
+    const float multiplier = 13.0f;
 
     Mat &img = *(Mat *) matAddr;
     Mat &maskImg = *(Mat *) maskAddr;
@@ -201,8 +203,12 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_bokeh(J
     // The circleBlur function is slow. Use the built in blur for now.
     //circleBlur(img, imgBlur);
     //cv::GaussianBlur(img, imgBlur, cv::Size(7, 7), 40);
-    blur(img, imgBlur, cv::Size(9, 9));
-    cvtColor(imgBlur, imgBlur, COLOR_BGR2GRAY);
+    blurAmount = blurAmount % 2 == 0 ? blurAmount + 1 : blurAmount; // Needs to be an odd number.
+    blur(img, imgBlur, cv::Size(blurAmount, blurAmount));
+
+    if (grayscale) {
+        cvtColor(imgBlur, imgBlur, COLOR_BGR2GRAY);
+    }
 
     // Do distance transform on the mask to get the amount for alpha blending.
     cv::Mat dist;

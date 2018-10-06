@@ -6,6 +6,12 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.os.Environment;
 
+import com.example.chin.instancesegmentation.ImageManager;
+
+import org.opencv.android.Utils;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+
 import java.io.File;
 import java.io.FileOutputStream;
 
@@ -45,18 +51,17 @@ public class ImageUtils {
      * @param bitmap The bitmap to save.
      */
     public static void saveBitmap(final Bitmap bitmap) {
-        saveBitmap(bitmap, "preview.png");
+        saveBitmap(bitmap, ImageManager.SAVE_PATH, "preview.png");
     }
 
     /**
      * Saves a Bitmap object to disk for analysis.
      *
      * @param bitmap The bitmap to save.
-     * @param filename The location to save the bitmap to.
+     * @param root The location to save the bitmap to.
+     * @param filename The name of the file.
      */
-    public static void saveBitmap(final Bitmap bitmap, final String filename) {
-        final String root =
-                Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "tensorflow";
+    public static void saveBitmap(final Bitmap bitmap, final String root, final String filename) {
         LOGGER.i("Saving %dx%d bitmap to %s.", bitmap.getWidth(), bitmap.getHeight(), root);
         final File myDir = new File(root);
 
@@ -76,6 +81,13 @@ public class ImageUtils {
             out.close();
         } catch (final Exception e) {
             LOGGER.e(e, "Exception!");
+        }
+    }
+
+    public static void deleteBitmap(final String path) {
+        final File file = new File(path);
+        if (file.exists()) {
+            file.delete();
         }
     }
 
@@ -407,6 +419,31 @@ public class ImageUtils {
         int newHeight = height / inSampleSize;
 
         return Bitmap.createScaledBitmap(src, newWidth, newHeight, true);
+    }
+
+    private static native void bokeh(
+            long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight, int blurAmount, boolean grayscale);
+
+    public static void applyMask(Bitmap src, Bitmap dst, int[] mask, int maskWidth, int maskHeight, int blurAmount, boolean grayscale) {
+        final int w = src.getWidth();
+        final int h = src.getHeight();
+
+        Mat img = new Mat();
+        Utils.bitmapToMat(src, img);
+        Mat maskMat = new Mat(maskHeight, maskWidth, CvType.CV_32SC1);
+        Mat outImage = new Mat(img.size(), img.type());
+        maskMat.put(0, 0, mask);
+
+        // Add bokeh effect.
+        bokeh(img.getNativeObjAddr(),
+                maskMat.getNativeObjAddr(),
+                outImage.getNativeObjAddr(),
+                w,
+                h,
+                blurAmount,
+                grayscale);
+
+        Utils.matToBitmap(outImage, dst);
     }
 }
 

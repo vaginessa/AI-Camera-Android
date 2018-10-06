@@ -2,25 +2,16 @@ package com.example.chin.instancesegmentation;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
-import android.graphics.Paint;
 import android.media.ImageReader;
-
 import android.util.Size;
-import android.widget.TextView;
 import android.widget.Toast;
+
+import com.example.chin.instancesegmentation.env.ImageUtils;
+import com.example.chin.instancesegmentation.env.Logger;
 
 import java.io.IOException;
 import java.util.List;
-
-import com.example.chin.instancesegmentation.env.Logger;
-import com.example.chin.instancesegmentation.env.ImageUtils;
-
-import org.opencv.android.Utils;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
 
 public class DetectorActivity extends CameraActivity implements ImageReader.OnImageAvailableListener {
     private static final Logger LOGGER = new Logger();
@@ -37,15 +28,18 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
 
     private Integer mSensorOrientation;
 
-    private int mCropWidth;
-    private int mCropHeight;
-
     private Bitmap mRgbFrameBitmap = null;
-    private Bitmap mCroppedBitmap = null;
-    private Bitmap mCropCopyBitmap = null;
+    private Bitmap mOriginalBitmap = null;
+    private Bitmap mDisplayBitmap = null;
+    private Bitmap mInferenceBitmap = null;
 
     private Bitmap mRgbPreviewBitmap = null;
     private Bitmap mCroppedPreviewBitmap = null;
+
+    private int mDisplayWidth;
+    private int mDisplayHeight;
+    private int mInferenceWidth;
+    private int mInferenceHeight;
 
     private byte[] mLuminanceCopy;
 
@@ -83,9 +77,9 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     private static final String[] SHUFFLESEG_OUTPUT_NAMES = { "output_mask" };
     private static final int MAX_SIZE = 500; // Length of the longest edge.
 
-    public native void process(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
-    public native void bokeh(long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight);
-
+    // Default post processing settings.
+    private final int mBlurAmount = 11;
+    private final boolean mGrayscale = true;
 
     @Override
     public void onPreviewSizeChosen(final Size size, final int rotation) {
@@ -108,50 +102,6 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 mPreviewWidth, mPreviewHeight,
                 INPUT_SIZE, INPUT_SIZE,
                 mSensorOrientation, true);
-
-        mTrackingOverlay = findViewById(R.id.tracking_overlay);
-        mTrackingOverlay.addCallback(
-                new OverlayView.DrawCallback() {
-                    @Override
-                    public void drawCallback(final Canvas canvas) { }
-                });
-
-        addCallback(
-                new OverlayView.DrawCallback() {
-                    @Override
-                    public void drawCallback(final Canvas canvas) {
-                        if (!isDebug()) {
-                            return;
-                        }
-
-                        final Bitmap copy = mCropCopyBitmap;
-                        if (copy == null) {
-                            return;
-                        }
-
-                        final int backgroundColor = Color.argb(100, 0, 0, 0);
-                        canvas.drawColor(backgroundColor);
-
-                        final Matrix matrix = new Matrix();
-                        final float scaleFactor = 2;
-                        matrix.postScale(scaleFactor, scaleFactor);
-                        matrix.postTranslate(
-                                canvas.getWidth() - copy.getWidth() * scaleFactor,
-                                canvas.getHeight() - copy.getHeight() * scaleFactor);
-                        canvas.drawBitmap(copy, matrix, new Paint());
-
-                        /*
-                        final Vector<String> lines = new Vector<String>();
-                        if (mDetector != null) {
-                            final String statString = mDetector.getStatString();
-                            final String[] statLines = statString.split("\n");
-                            for (final String line : statLines) {
-                                lines.add(line);
-                            }
-                        }
-                        */
-                    }
-                });
     }
 
     @Override
@@ -160,12 +110,31 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
             initialiseDetectors();
         }
 
+        mSensorOrientation = rotation - getScreenOrientation();
+        Size preferredSize = ImageManager.getPreferredImageSize();
+
         mPictureWidth = size.getWidth();
         mPictureHeight = size.getHeight();
 
-        mSensorOrientation = rotation - getScreenOrientation();
+        float scaleFactor = Math.max(preferredSize.getHeight(), preferredSize.getWidth()) /
+                (float)Math.max(mPictureWidth, mPictureHeight);
+
+        mDisplayWidth = Math.round(scaleFactor * mPictureWidth);
+        mDisplayHeight = Math.round(scaleFactor * mPictureHeight);
+
+        if (Math.abs(rotation) == 90) {
+            int temp = mDisplayHeight;
+            mDisplayHeight = mDisplayWidth;
+            mDisplayWidth = temp;
+        }
+
+        float scaleFactor2 = MAX_SIZE / (float)Math.max(mDisplayWidth, mDisplayHeight);
+        mInferenceWidth = Math.round(scaleFactor2 * mDisplayWidth);
+        mInferenceHeight = Math.round(scaleFactor2 * mDisplayHeight);
 
         mRgbFrameBitmap = Bitmap.createBitmap(mPictureWidth, mPictureHeight, Bitmap.Config.ARGB_8888);
+        mDisplayBitmap = Bitmap.createBitmap(mDisplayWidth, mDisplayHeight, Bitmap.Config.ARGB_8888);
+        mInferenceBitmap = Bitmap.createBitmap(mInferenceWidth, mInferenceHeight, Bitmap.Config.ARGB_8888);
 
         mCropToFrameTransform = new Matrix();
         mFrameToCropTransform = ImageUtils.getTransformationMatrix(
@@ -222,13 +191,10 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     protected void processImage() {
         LOGGER.i("Process still");
 
-        final Long timeStamp = System.currentTimeMillis();
-        final String filename = "IMG_" + timeStamp.toString() + ".png";
-        ImageManager.getInstance().addPendingImage(filename);
-
         runInBackground(new Runnable() {
             @Override
             public void run() {
+                final String filename = mFilename;
 
                 /*
                 mRgbFrameBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.nayeon);
@@ -250,7 +216,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 long start = System.nanoTime();
 
                 // Rotate image to the correct orientation.
-                final Bitmap rgbFrameBitmapRotated = Bitmap.createBitmap(mRgbFrameBitmap,
+                mOriginalBitmap = Bitmap.createBitmap(mRgbFrameBitmap,
                         0,
                         0,
                         mRgbFrameBitmap.getWidth(),
@@ -258,16 +224,14 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                         mFrameToCropTransform,
                         true);
 
-                final int w = rgbFrameBitmapRotated.getWidth();
-                final int h = rgbFrameBitmapRotated.getHeight();
+                mRgbFrameBitmap.recycle();
+
+                // Resize to a smaller image for faster post processing. The size is large enough to
+                // still look good for the resolution of the screen.
+                mDisplayBitmap = Bitmap.createScaledBitmap(mOriginalBitmap, mDisplayWidth, mDisplayHeight, true);
 
                 // Resize to a smaller image for faster inference.
-                final float scaleFactor = (float)MAX_SIZE / Math.max(w, h);
-                mCropWidth = Math.round(scaleFactor * w);
-                mCropHeight = Math.round(scaleFactor * h);
-
-                mCroppedBitmap =
-                        Bitmap.createScaledBitmap(rgbFrameBitmapRotated, mCropWidth, mCropHeight, true);
+                mInferenceBitmap = Bitmap.createScaledBitmap(mDisplayBitmap, mInferenceWidth, mInferenceHeight, true);
 
                 readyForNextImage();
 
@@ -275,7 +239,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 long dur1 = (mid1 - start) / 1000000 ;
                 LOGGER.i("Preparing bitmap took " + dur1 + " ms");
 
-                final List<Classifier.Recognition> results = mDetector.recognizeImage(mCroppedBitmap);
+                final List<Classifier.Recognition> results = mDetector.recognizeImage(mInferenceBitmap);
 
                 long mid2 = System.nanoTime();
                 long dur2 = (mid2 - mid1) /1000000 ;
@@ -287,35 +251,29 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 Classifier.Recognition result = results.get(0);
                 int[] mask = result.getMask();
 
-                Mat img = new Mat();
-                Utils.bitmapToMat(rgbFrameBitmapRotated, img);
-                Mat maskMat = new Mat(mCropHeight, mCropWidth, CvType.CV_32SC1);
-                Mat outImage = new Mat(img.size(), img.type());
-                maskMat.put(0, 0, mask);
-
-                // Add bokeh effect.
-                bokeh(img.getNativeObjAddr(),
-                        maskMat.getNativeObjAddr(),
-                        outImage.getNativeObjAddr(),
-                        w,
-                        h);
-
-                Utils.matToBitmap(outImage, rgbFrameBitmapRotated);
+                ImageUtils.applyMask(mDisplayBitmap, mDisplayBitmap, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
 
                 long mid3 = System.nanoTime();
                 long dur3 = (mid3 - mid2) / 1000000;
                 LOGGER.i("Post processing took " + dur3 + " ms");
 
-                ImageManager.getInstance().cacheBitmap(filename, rgbFrameBitmapRotated);
+                ImageManager.getInstance().cacheBitmap(filename, mDisplayBitmap);
+                ImageData imageData = new ImageData(mOriginalBitmap, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
+                ImageManager.getInstance().storeImageData(filename, imageData);
                 onProcessingComplete(filename);
-                ImageManager.getInstance().saveBitmap(filename, rgbFrameBitmapRotated);
 
-                showToast("Saved");
+                int blurAmount = Math.round(
+                        (float)mBlurAmount * mOriginalBitmap.getWidth() / mDisplayBitmap.getWidth());
+                Bitmap finalResult = Bitmap.createBitmap(mOriginalBitmap);
+                ImageUtils.applyMask(mOriginalBitmap, finalResult, mask, mInferenceWidth, mInferenceHeight, blurAmount, mGrayscale);
+                ImageManager.getInstance().saveBitmap(filename, finalResult);
 
                 long mid4 = System.nanoTime();
                 long dur4 = (mid4 - mid3) / 1000000;
                 LOGGER.i("Saving to file took " + dur4 + " ms");
 
+                finalResult.recycle();
+                mInferenceBitmap.recycle();
                 mComputingDetection = false;
             }
         });

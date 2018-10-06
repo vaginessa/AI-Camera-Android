@@ -56,7 +56,8 @@ public abstract class CameraActivity extends AppCompatActivity
         implements
             OnImageAvailableListener,
             Camera.PreviewCallback,
-            CameraFragment.OnCameraButtonClickedListener {
+            CameraFragment.OnCameraButtonClickedListener,
+            RunInBackgroundListener {
 
     private static final Logger LOGGER = new Logger();
 
@@ -89,6 +90,7 @@ public abstract class CameraActivity extends AppCompatActivity
     private Runnable mPreviewImageConverter;
 
     private int mRotation = 90;
+    protected String mFilename;
 
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -201,19 +203,15 @@ public abstract class CameraActivity extends AppCompatActivity
             return;
         }
 
+        final Long timeStamp = System.currentTimeMillis();
+        mFilename = "IMG_" + timeStamp.toString() + ".png";
+        ImageManager.getInstance().addPendingImage(mFilename);
+
         mIsProcessingFrame = true;
 
-        try {
-            // Initialize the storage bitmaps once when the resolution is known.
-            if (mPictureBytes == null) {
-                Camera.Size pictureSize = camera.getParameters().getPictureSize();
-                mPictureHeight = pictureSize.height;
-                mPictureWidth = pictureSize.width;
-                onPictureSizeChosen(new Size(pictureSize.width, pictureSize.height), mRotation);
-            }
-        } catch (final Exception e) {
-            LOGGER.e(e, "Exception!");
-            return;
+        // Initialize the storage bitmaps once when the resolution is known.
+        if (mPictureBytes == null) {
+            prepareBitmap(camera.getParameters().getPictureSize());
         }
 
         mPictureBytes = bytes;
@@ -228,6 +226,17 @@ public abstract class CameraActivity extends AppCompatActivity
                 };
 
         processImage();
+    }
+
+    private void prepareBitmap(Camera.Size pictureSize) {
+        try {
+            mPictureHeight = pictureSize.height;
+            mPictureWidth = pictureSize.width;
+            onPictureSizeChosen(new Size(pictureSize.width, pictureSize.height), mRotation);
+        } catch (final Exception e) {
+            LOGGER.e(e, "Exception!");
+            return;
+        }
     }
 
     // Callback for when a still image is taken with the Camera2 API.
@@ -455,6 +464,11 @@ public abstract class CameraActivity extends AppCompatActivity
         }
     }
 
+    @Override
+    public void run(Runnable runnable) {
+        runInBackground(runnable);
+    }
+
     private boolean hasPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             return checkSelfPermission(PERMISSION_CAMERA) == PackageManager.PERMISSION_GRANTED &&
@@ -570,8 +584,9 @@ public abstract class CameraActivity extends AppCompatActivity
                     null, //this,
                     new CameraChangedListener() {
                         @Override
-                        public void onCameraChangedListener(boolean isFrontFacing) {
+                        public void onCameraChangedListener(Camera camera, boolean isFrontFacing) {
                             mRotation = isFrontFacing ? -90 : 90;
+                            prepareBitmap(camera.getParameters().getPictureSize());
                         }
                     },
                     getLayoutId(),
