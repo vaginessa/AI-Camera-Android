@@ -1,8 +1,10 @@
 package com.example.chin.instancesegmentation;
 
+import android.os.Parcel;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentStatePagerAdapter;
+import android.support.v4.view.PagerAdapter;
 
 import java.util.ArrayList;
 
@@ -15,9 +17,23 @@ public class GalleryPagerAdapter extends FragmentStatePagerAdapter {
     }
 
     @Override
-    public Fragment getItem(int position) {
-        ImageItem image = images.get(position);
-        return ImageDetailFragment.newInstance(image);
+    public Fragment getItem(final int position) {
+        final ImageItem image = images.get(position);
+        return ImageDetailFragment.newInstance(image, new OnDeleteImageListener() {
+            @Override
+            public int describeContents() {
+                return 0;
+            }
+
+            @Override
+            public void writeToParcel(Parcel dest, int flags) {}
+
+            @Override
+            public void onDeleteImage(ImageItem imageItem) {
+                images.remove(position);
+                notifyDataSetChanged();
+            }
+        });
     }
 
     @Override
@@ -27,8 +43,6 @@ public class GalleryPagerAdapter extends FragmentStatePagerAdapter {
 
     @Override
     public int getItemPosition(Object object) {
-        ImageDetailFragment f = (ImageDetailFragment)object;
-        f.updateFragment();
-        return super.getItemPosition(object);
+        return PagerAdapter.POSITION_NONE;
     }
 }

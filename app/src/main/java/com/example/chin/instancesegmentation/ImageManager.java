@@ -57,7 +57,7 @@ public class ImageManager
         File saveDir = new File(SAVE_PATH);
 
         for (String title : mCachedBitmap.keySet()) {
-            ImageItem item = new ImageItem(title, null);
+            ImageItem item = new ImageItem(title, SAVE_PATH + File.separator + title);
             images.add(item);
         }
 
@@ -128,6 +128,14 @@ public class ImageManager
         // Use the title as the filename.
         ImageUtils.saveBitmap(bitmap, SAVE_PATH, title);
         mPendingImages.remove(title);
+    }
+
+    public void deleteBitmap(ImageItem imageItem) {
+        final String title = imageItem.getTitle();
+        ImageUtils.deleteBitmap(imageItem.getPath());
+        mPendingImages.remove(title);
+        mCachedBitmap.remove(title);
+        mImageDataMap.remove(title);
     }
 
     public void clearCachedBitmap() {

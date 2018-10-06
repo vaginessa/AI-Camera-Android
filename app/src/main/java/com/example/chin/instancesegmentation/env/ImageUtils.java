@@ -84,6 +84,13 @@ public class ImageUtils {
         }
     }
 
+    public static void deleteBitmap(final String path) {
+        final File file = new File(path);
+        if (file.exists()) {
+            file.delete();
+        }
+    }
+
     // This value is 2 ^ 18 - 1, and is used to clamp the RGB values before their ranges
     // are normalized to eight bits.
     static final int kMaxChannelValue = 262143;

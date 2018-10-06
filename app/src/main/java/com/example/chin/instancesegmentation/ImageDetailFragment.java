@@ -16,15 +16,19 @@ import com.github.chrisbanes.photoview.PhotoView;
 
 public class ImageDetailFragment extends Fragment {
     private static final String EXTRA_IMAGE = "image_item";
+    private static final String ON_DELETE = "on_delete";
     private View mView;
     private ImageButton mEditButton;
+    private ImageButton mDeleteButton;
+    private OnDeleteImageListener mOnDelete;
 
     public ImageDetailFragment() { }
 
-    public static ImageDetailFragment newInstance(ImageItem imageItem) {
+    public static ImageDetailFragment newInstance(ImageItem imageItem, OnDeleteImageListener onDelete) {
         ImageDetailFragment fragment = new ImageDetailFragment();
         Bundle args = new Bundle();
         args.putParcelable(EXTRA_IMAGE, imageItem);
+        args.putParcelable(ON_DELETE, onDelete);
         fragment.setArguments(args);
         return fragment;
     }
@@ -43,11 +47,23 @@ public class ImageDetailFragment extends Fragment {
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mView = view;
-        setViewAsync();
 
         final ImageItem imageItem = getArguments().getParcelable(EXTRA_IMAGE);
+        mOnDelete = getArguments().getParcelable(ON_DELETE);
         mEditButton = view.findViewById(R.id.goto_edit);
         toggleEditButton(imageItem);
+
+        mDeleteButton = view.findViewById(R.id.image_detail_delete);
+        mDeleteButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ImageManager.getInstance().deleteBitmap(imageItem);
+                mOnDelete.onDeleteImage(imageItem);
+            }
+        });
+        mDeleteButton.setVisibility(View.INVISIBLE);
+
+        setViewAsync();
     }
 
     public void updateFragment() {
@@ -71,6 +87,7 @@ public class ImageDetailFragment extends Fragment {
                     textView.setText("");
                     photoView.setImageBitmap(bitmap);
                     toggleEditButton(imageItem);
+                    mDeleteButton.setVisibility(View.VISIBLE);
                 }
             }
         };
