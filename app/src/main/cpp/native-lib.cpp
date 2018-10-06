@@ -185,7 +185,7 @@ void JNICALL Java_com_example_chin_instancesegmentation_env_ImageUtils_bokeh(JNI
                                                                              jint pictureHeight,
                                                                              jint blurAmount,
                                                                              jboolean grayscale) {
-    const float multiplier = 20.0f;
+    const float multiplier = 13.0f;
 
     Mat &img = *(Mat *) matAddr;
     Mat &maskImg = *(Mat *) maskAddr;

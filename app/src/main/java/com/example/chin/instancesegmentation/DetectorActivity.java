@@ -78,7 +78,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     private static final int MAX_SIZE = 500; // Length of the longest edge.
 
     // Default post processing settings.
-    private final int mBlurAmount = 9;
+    private final int mBlurAmount = 11;
     private final boolean mGrayscale = true;
 
     @Override

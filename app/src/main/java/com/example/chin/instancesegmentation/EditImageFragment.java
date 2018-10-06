@@ -30,7 +30,7 @@ public class EditImageFragment extends Fragment {
     private ImageButton mSaveButton;
     private RunInBackgroundListener mBackgroundRunner;
 
-    private final int MAX_BLUR = 16;
+    private final int MAX_BLUR = 12;
 
     // Current settings.
     private int mBlurAmount;
