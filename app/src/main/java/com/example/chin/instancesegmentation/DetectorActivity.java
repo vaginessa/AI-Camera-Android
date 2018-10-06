@@ -157,19 +157,6 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                                 SHUFFLESEG_OUTPUT_NAMES);
             }
 
-            if (mClassifier == null) {
-                mClassifier =
-                        TensorFlowImageClassifier.create(
-                                getAssets(),
-                                CLASSIFIER_MODEL_FILE,
-                                CLASSIFIER_LABELS_FILE,
-                                INPUT_SIZE,
-                                IMAGE_MEAN,
-                                IMAGE_STD,
-                                INPUT_NAME,
-                                OUTPUT_NAME);
-            }
-
             mInitialised = true;
         } catch (final IOException e) {
             LOGGER.e("Exception initializing classifier!", e);
