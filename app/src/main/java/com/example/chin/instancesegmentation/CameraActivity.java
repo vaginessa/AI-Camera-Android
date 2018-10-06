@@ -209,17 +209,9 @@ public abstract class CameraActivity extends AppCompatActivity
 
         mIsProcessingFrame = true;
 
-        try {
-            // Initialize the storage bitmaps once when the resolution is known.
-            if (mPictureBytes == null) {
-                Camera.Size pictureSize = camera.getParameters().getPictureSize();
-                mPictureHeight = pictureSize.height;
-                mPictureWidth = pictureSize.width;
-                onPictureSizeChosen(new Size(pictureSize.width, pictureSize.height), mRotation);
-            }
-        } catch (final Exception e) {
-            LOGGER.e(e, "Exception!");
-            return;
+        // Initialize the storage bitmaps once when the resolution is known.
+        if (mPictureBytes == null) {
+            prepareBitmap(camera.getParameters().getPictureSize());
         }
 
         mPictureBytes = bytes;
@@ -234,6 +226,17 @@ public abstract class CameraActivity extends AppCompatActivity
                 };
 
         processImage();
+    }
+
+    private void prepareBitmap(Camera.Size pictureSize) {
+        try {
+            mPictureHeight = pictureSize.height;
+            mPictureWidth = pictureSize.width;
+            onPictureSizeChosen(new Size(pictureSize.width, pictureSize.height), mRotation);
+        } catch (final Exception e) {
+            LOGGER.e(e, "Exception!");
+            return;
+        }
     }
 
     // Callback for when a still image is taken with the Camera2 API.
@@ -581,8 +584,9 @@ public abstract class CameraActivity extends AppCompatActivity
                     null, //this,
                     new CameraChangedListener() {
                         @Override
-                        public void onCameraChangedListener(boolean isFrontFacing) {
+                        public void onCameraChangedListener(Camera camera, boolean isFrontFacing) {
                             mRotation = isFrontFacing ? -90 : 90;
+                            prepareBitmap(camera.getParameters().getPictureSize());
                         }
                     },
                     getLayoutId(),

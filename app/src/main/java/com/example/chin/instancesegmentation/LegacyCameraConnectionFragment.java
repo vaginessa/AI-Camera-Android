@@ -234,7 +234,7 @@ public class LegacyCameraConnectionFragment extends CameraFragment {
             @Override
             public void onClick(View v) {
                 mUseFrontCamera = !mUseFrontCamera;
-                mCameraChangedListener.onCameraChangedListener(mUseFrontCamera);
+                mCameraChangedListener.onCameraChangedListener(mCamera, mUseFrontCamera);
                 openCamera(mTextureView.getSurfaceTexture());
             }
         });
