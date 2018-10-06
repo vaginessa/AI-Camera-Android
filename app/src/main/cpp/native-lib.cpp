@@ -203,6 +203,7 @@ void JNICALL Java_com_example_chin_instancesegmentation_env_ImageUtils_bokeh(JNI
     // The circleBlur function is slow. Use the built in blur for now.
     //circleBlur(img, imgBlur);
     //cv::GaussianBlur(img, imgBlur, cv::Size(7, 7), 40);
+    blurAmount = blurAmount % 2 == 0 ? blurAmount + 1 : blurAmount; // Needs to be an odd number.
     blur(img, imgBlur, cv::Size(blurAmount, blurAmount));
 
     if (grayscale) {

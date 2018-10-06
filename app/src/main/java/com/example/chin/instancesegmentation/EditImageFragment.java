@@ -125,12 +125,15 @@ public class EditImageFragment extends Fragment {
                     @Override
                     public void run() {
                         Bitmap result = Bitmap.createBitmap(mImageData.getOriginalImage());
+                        int blurAmount = Math.round(
+                                (float)mImageData.getBlurAmount() * result.getWidth() / mProcessedBitmap.getWidth());
+
                         ImageUtils.applyMask(mImageData.getOriginalImage(),
                                 result,
                                 mImageData.getMask(),
                                 mImageData.getMaskWidth(),
                                 mImageData.getMaskHeight(),
-                                mImageData.getBlurAmount(),
+                                blurAmount,
                                 mImageData.isGrayscale());
                         ImageManager.getInstance().saveBitmap(mImageItem.getTitle(), result);
                     }

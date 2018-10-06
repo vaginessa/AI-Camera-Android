@@ -262,8 +262,10 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
                 ImageManager.getInstance().storeImageData(filename, imageData);
                 onProcessingComplete(filename);
 
+                int blurAmount = Math.round(
+                        (float)mBlurAmount * mOriginalBitmap.getWidth() / mDisplayBitmap.getWidth());
                 Bitmap finalResult = Bitmap.createBitmap(mOriginalBitmap);
-                ImageUtils.applyMask(mOriginalBitmap, finalResult, mask, mInferenceWidth, mInferenceHeight, mBlurAmount, mGrayscale);
+                ImageUtils.applyMask(mOriginalBitmap, finalResult, mask, mInferenceWidth, mInferenceHeight, blurAmount, mGrayscale);
                 ImageManager.getInstance().saveBitmap(filename, finalResult);
 
                 long mid4 = System.nanoTime();
