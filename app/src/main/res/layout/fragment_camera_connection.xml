@@ -5,19 +5,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.example.chin.instancesegmentation.AutoFitTextureView
+    <com.lun.chin.aicamera.AutoFitTextureView
         android:id="@+id/texture"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true" />
 
-    <com.example.chin.instancesegmentation.OverlayView
+    <com.lun.chin.aicamera.OverlayView
         android:id="@+id/tracking_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
-    <com.example.chin.instancesegmentation.OverlayView
+    <com.lun.chin.aicamera.OverlayView
         android:id="@+id/debug_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

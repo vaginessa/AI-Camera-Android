@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <resources>
-    <string name="app_name">InstanceSegmentation</string>
+    <string name="app_name">AiCamera</string>
     <string name="loading_text">Loading</string>
     <string name="description_info">Info</string>
     <string name="request_permission">This sample needs camera permission.</string>

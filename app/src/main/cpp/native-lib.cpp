@@ -105,7 +105,7 @@ void alphaBlendWithMultiplier(cv::Mat &foreground, cv::Mat &background, cv::Mat 
 
 extern "C"
 {
-void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process(JNIEnv *env,
+void JNICALL Java_com_lun_chin_aicamera_DetectorActivity_process(JNIEnv *env,
                                                                                  jobject instance,
                                                                                  jlong matAddr,
                                                                                  jlong maskAddr,
@@ -176,7 +176,7 @@ void JNICALL Java_com_example_chin_instancesegmentation_DetectorActivity_process
 
 extern "C"
 {
-void JNICALL Java_com_example_chin_instancesegmentation_env_ImageUtils_bokeh(JNIEnv *env,
+void JNICALL Java_com_lun_chin_aicamera_env_ImageUtils_bokeh(JNIEnv *env,
                                                                              jobject instance,
                                                                              jlong matAddr,
                                                                              jlong maskAddr,
