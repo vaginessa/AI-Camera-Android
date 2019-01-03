@@ -72,7 +72,7 @@ public class DetectorActivity extends CameraActivity implements ImageReader.OnIm
     private static final int DEEPLAB_IMAGE_SIZE = 513;
 
     // ShuffleSeg configs
-    private static final String SHUFFLESEG_MODEL_FILE = "file:///android_asset/shuffleseg_40200.pb";
+    private static final String SHUFFLESEG_MODEL_FILE = "file:///android_asset/shuffleseg_human_cat_dog_39618.pb";
     private static final String SHUFFLESEG_INPUT_NAME = "image_tensor";
     private static final String[] SHUFFLESEG_OUTPUT_NAMES = { "output_mask" };
     private static final int MAX_SIZE = 500; // Length of the longest edge.
