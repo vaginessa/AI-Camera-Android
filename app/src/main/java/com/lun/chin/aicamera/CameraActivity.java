@@ -203,6 +203,7 @@ public class CameraActivity extends AppCompatActivity
     public synchronized void onDestroy() {
         LOGGER.d("onDestroy " + this);
 
+        ImageManager.getInstance().quit();
         mHandlerThread.quitSafely();
         try {
             mHandlerThread.join();

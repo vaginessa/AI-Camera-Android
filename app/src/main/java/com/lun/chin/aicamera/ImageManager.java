@@ -4,9 +4,12 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Size;
 
 import com.lun.chin.aicamera.env.ImageUtils;
+import com.lun.chin.aicamera.env.Logger;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -17,6 +20,8 @@ import java.util.Set;
 
 public class ImageManager
 {
+    private static final Logger LOGGER = new Logger();
+
     public static final String SAVE_PATH =
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                 .getAbsolutePath()
@@ -32,6 +37,9 @@ public class ImageManager
 
     private Size mPreferredImageSize;
 
+    private HandlerThread mBackgroundThread;
+    private Handler mBackgroundHandler;
+
     private static ImageManager mInstance;
 
     public static ImageManager getInstance() {
@@ -40,6 +48,8 @@ public class ImageManager
             mInstance.mPreferredImageSize = new Size(
                     Resources.getSystem().getDisplayMetrics().widthPixels / 2,
                     Resources.getSystem().getDisplayMetrics().heightPixels / 2);
+
+            mInstance.startBackgroundThread();
         }
         return mInstance;
     }
@@ -130,6 +140,15 @@ public class ImageManager
         mCachedBitmap.remove(title);
     }
 
+    public void saveBitmapAsync(final String title, final Bitmap bitmap) {
+        mBackgroundHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                saveBitmap(title, bitmap);
+            }
+        });
+    }
+
     public void deleteBitmap(ImageItem imageItem) {
         final String title = imageItem.getTitle();
         ImageUtils.deleteBitmap(imageItem.getPath());
@@ -144,5 +163,22 @@ public class ImageManager
 
     public ImageData getImageData(String title) {
         return mImageDataMap.get(title);
+    }
+
+    public void quit() {
+        mBackgroundThread.quitSafely();
+        try {
+            mBackgroundThread.join();
+            mBackgroundThread = null;
+            mBackgroundHandler = null;
+        } catch (final InterruptedException e) {
+            LOGGER.e(e, "Exception!");
+        }
+    }
+
+    private void startBackgroundThread() {
+        mBackgroundThread = new HandlerThread("ImageManagerBG");
+        mBackgroundThread.start();
+        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
     }
 }

@@ -23,7 +23,6 @@ import com.lun.chin.aicamera.env.Logger;
  * create an instance of this fragment.
  */
 public class EditImageFragment extends Fragment {
-    private static final Logger LOGGER = new Logger();
     private static final String EXTRA_IMAGE = "image_item";
 
     private ImageItem mImageItem;
@@ -31,9 +30,6 @@ public class EditImageFragment extends Fragment {
     private Bitmap mProcessedBitmap;
     private PhotoView mPhotoView;
     private ImageButton mSaveButton;
-    private HandlerThread mBackgroundThread;
-    private Handler mBackgroundHandler;
-
     private final int MAX_BLUR = 12;
 
     // Current settings.
@@ -125,41 +121,24 @@ public class EditImageFragment extends Fragment {
                 mImageData.setBlurAmount(mBlurAmount);
                 ImageManager.getInstance().cacheBitmap(mImageItem.getTitle(), mProcessedBitmap);
 
-                mBackgroundHandler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Bitmap result = Bitmap.createBitmap(mImageData.getOriginalImage());
-                        int blurAmount = Math.round(
-                                (float)mImageData.getBlurAmount() * result.getWidth() / mProcessedBitmap.getWidth());
+                Bitmap result = Bitmap.createBitmap(mImageData.getOriginalImage());
+                int blurAmount = Math.round(
+                        (float) mImageData.getBlurAmount() * result.getWidth() / mProcessedBitmap.getWidth());
 
-                        ImageUtils.applyMask(mImageData.getOriginalImage(),
-                                result,
-                                mImageData.getMask(),
-                                mImageData.getMaskWidth(),
-                                mImageData.getMaskHeight(),
-                                blurAmount,
-                                mImageData.isGrayscale());
-                        ImageManager.getInstance().saveBitmap(mImageItem.getTitle(), result);
-                    }
-                });
+                ImageUtils.applyMask(mImageData.getOriginalImage(),
+                        result,
+                        mImageData.getMask(),
+                        mImageData.getMaskWidth(),
+                        mImageData.getMaskHeight(),
+                        blurAmount,
+                        mImageData.isGrayscale());
+
+                ImageManager.getInstance().saveBitmapAsync(mImageItem.getTitle(), result);
+
                 getActivity().getSupportFragmentManager().popBackStackImmediate();
             }
         });
         mSaveButton.setEnabled(false);
-
-        startBackgroundThread();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        startBackgroundThread();
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        stopBackgroundThread();
     }
 
     private void processImage(int blurAmount, boolean grayscale) {
@@ -176,22 +155,5 @@ public class EditImageFragment extends Fragment {
 
         mPhotoView.setImageBitmap(mProcessedBitmap);
         mSaveButton.setEnabled(true);
-    }
-
-    private void startBackgroundThread() {
-        mBackgroundThread = new HandlerThread("EditBackground");
-        mBackgroundThread.start();
-        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
-    }
-
-    private void stopBackgroundThread() {
-        mBackgroundThread.quitSafely();
-        try {
-            mBackgroundThread.join();
-            mBackgroundThread = null;
-            mBackgroundHandler = null;
-        } catch (final InterruptedException e) {
-            LOGGER.e(e, "Exception!");
-        }
     }
 }
