@@ -6,4 +6,10 @@
     <string name="description_info">Info</string>
     <string name="request_permission">This sample needs camera permission.</string>
     <string name="camera_error">This device doesn\'t support Camera2 API.</string>
+    <string name="effects">Effects</string>
+    <string name="blur">Blur</string>
+    <string name="none">None</string>
+    <string name="gray">Gray</string>
+    <string name="low">Low</string>
+    <string name="high">High</string>
 </resources>

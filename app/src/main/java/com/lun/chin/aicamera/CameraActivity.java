@@ -11,6 +11,9 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Size;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.SubMenu;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageButton;
@@ -60,6 +63,7 @@ public class CameraActivity extends AppCompatActivity
     private Mat mInferenceMat;
     private int mInferenceWidth;
     private int mInferenceHeight;
+    private int mPreviewWidth;
 
     // Dimensions for the picture.
     private int mPictureInferenceHeight;
@@ -70,9 +74,14 @@ public class CameraActivity extends AppCompatActivity
     private String mFilename;
     private boolean mPausePreviewProcessing = false;
 
-    private final int mBlurAmount = 11;
-    private final int mPreviewBlurAmount = 5;
-    private final boolean mGrayScale = true;
+    private int mPreviewBlurAmount = 7;
+    private boolean mGrayScale = true;
+
+    private MenuItem mItemPreviewNone;
+    private MenuItem mItemPreviewGray;
+    private MenuItem mItemPreviewNoBlur;
+    private MenuItem mItemPreviewLowBlur;
+    private MenuItem mItemPreviewHiBlur;
 
     private BaseLoaderCallback _baseLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -143,6 +152,7 @@ public class CameraActivity extends AppCompatActivity
         LOGGER.d("onCreate " + this);
         super.onCreate(null);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        getSupportActionBar().setDisplayShowTitleEnabled(false);
 
         setContentView(R.layout.activity_camera);
 
@@ -236,6 +246,7 @@ public class CameraActivity extends AppCompatActivity
         // Allocate bitmap and mat.
         int width = previewSize.getHeight();
         int height = previewSize.getWidth();
+        mPreviewWidth = width;
         float scale = INFERENCE_SIZE / (float)Math.max(width, height);
         mInferenceWidth = (int)(width * scale);
         mInferenceHeight = (int)(height * scale);
@@ -326,21 +337,23 @@ public class CameraActivity extends AppCompatActivity
                 Classifier.Recognition result = results.get(0);
                 int[] mask = result.getMask();
 
+                int blurAmount = Math.round((float)mPreviewBlurAmount * disWidth / mPreviewWidth);
+
                 ImageUtils.applyMask(displayMat,
                         displayBitmap,
                         mask,
                         infWidth,
                         infHeight,
-                        mBlurAmount,
+                        blurAmount,
                         mGrayScale);
 
                 ImageManager.getInstance().cacheBitmap(mFilename, displayBitmap);
-                ImageData imageData = new ImageData(pictureBitmap, mask, infWidth, infHeight, mBlurAmount, mGrayScale);
+                ImageData imageData = new ImageData(pictureBitmap, mask, infWidth, infHeight, blurAmount, mGrayScale);
                 ImageManager.getInstance().storeImageData(mFilename, imageData);
 
                 onProcessingComplete(mFilename);
 
-                int blurAmount = Math.round((float)mBlurAmount * width / disWidth);
+                blurAmount = Math.round((float)mPreviewBlurAmount * width / disWidth);
                 Bitmap finalResult = Bitmap.createBitmap(pictureBitmap);
                 ImageUtils.applyMask(mat, finalResult, mask, infWidth, infHeight, blurAmount, mGrayScale);
                 ImageManager.getInstance().saveBitmap(mFilename, finalResult);
@@ -357,10 +370,7 @@ public class CameraActivity extends AppCompatActivity
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                LOGGER.d("onProcessingComplete");
                 Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.container);
-                LOGGER.d("Found fragment = " + (fragment != null));
-
                 if (fragment != null && fragment.isAdded()) {
                     if (fragment instanceof RecyclerViewFragment) {
                         ((RecyclerViewFragment)fragment).notifyImageChange(filename);
@@ -370,6 +380,34 @@ public class CameraActivity extends AppCompatActivity
                 }
             }
         });
+    }
+
+    public boolean onCreateOptionsMenu(Menu menu) {
+        SubMenu effectsMenu = menu.addSubMenu(R.string.effects);
+        mItemPreviewNone = effectsMenu.add(R.string.none);
+        mItemPreviewGray = effectsMenu.add(R.string.gray);
+        SubMenu blurMenu = menu.addSubMenu(R.string.blur);
+        mItemPreviewNoBlur = blurMenu.add(R.string.none);
+        mItemPreviewLowBlur = blurMenu.add(R.string.low);
+        mItemPreviewHiBlur = blurMenu.add(R.string.high);
+
+        return true;
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item == mItemPreviewNone) {
+            mGrayScale = false;
+        } else if (item == mItemPreviewGray) {
+            mGrayScale = true;
+        } else if (item == mItemPreviewNoBlur) {
+            mPreviewBlurAmount = 0;
+        } else if (item == mItemPreviewLowBlur) {
+            mPreviewBlurAmount = 7;
+        } else if (item == mItemPreviewHiBlur) {
+            mPreviewBlurAmount = 11;
+        }
+
+        return true;
     }
 
     private void initialise() {
