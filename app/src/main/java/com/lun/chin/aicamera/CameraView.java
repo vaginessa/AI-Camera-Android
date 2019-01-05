@@ -54,7 +54,13 @@ public class CameraView extends CameraViewBase implements Camera.PreviewCallback
         if (mCamera != null) {
             releaseCamera();
         }
-        mCamera = Camera.open(index);
+
+        try {
+            mCamera = Camera.open(index);
+        } catch (Exception ex) {
+            LOGGER.e(ex, "Unable to open camera");
+            return;
+        }
 
         try {
             Camera.Parameters parameters = mCamera.getParameters();

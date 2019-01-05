@@ -123,13 +123,15 @@ public abstract class CameraViewBase extends AutoFitTextureView implements
     }
 
     protected void stopBackgroundThread() {
-        mHandlerThread.quitSafely();
-        try {
-            mHandlerThread.join();
-            mHandlerThread = null;
-            mHandler = null;
-        } catch (final InterruptedException e) {
-            LOGGER.e(e, "Exception!");
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            try {
+                mHandlerThread.join();
+                mHandlerThread = null;
+                mHandler = null;
+            } catch (final InterruptedException e) {
+                LOGGER.e(e, "Exception!");
+            }
         }
     }
 

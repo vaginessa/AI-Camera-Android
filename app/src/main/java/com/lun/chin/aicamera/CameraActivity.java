@@ -200,7 +200,9 @@ public class CameraActivity extends AppCompatActivity
     public synchronized void onPause() {
         LOGGER.d("onPause " + this);
         super.onPause();
-        mCameraView.pauseCamera();
+        if (mCameraView != null) {
+            mCameraView.pauseCamera();
+        }
     }
 
     @Override
@@ -214,13 +216,15 @@ public class CameraActivity extends AppCompatActivity
         LOGGER.d("onDestroy " + this);
 
         ImageManager.getInstance().quit();
-        mHandlerThread.quitSafely();
-        try {
-            mHandlerThread.join();
-            mHandlerThread = null;
-            mHandler = null;
-        } catch (final InterruptedException e) {
-            LOGGER.e(e, "Exception!");
+        if (mHandlerThread != null) {
+            mHandlerThread.quitSafely();
+            try {
+                mHandlerThread.join();
+                mHandlerThread = null;
+                mHandler = null;
+            } catch (final InterruptedException e) {
+                LOGGER.e(e, "Exception!");
+            }
         }
 
         super.onDestroy();
@@ -234,6 +238,7 @@ public class CameraActivity extends AppCompatActivity
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED
                     && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 initialise();
+                mCameraView.openCamera();
             } else {
                 requestPermission();
             }
@@ -446,8 +451,7 @@ public class CameraActivity extends AppCompatActivity
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (shouldShowRequestPermissionRationale(PERMISSION_CAMERA) ||
                     shouldShowRequestPermissionRationale(PERMISSION_STORAGE)) {
-                Toast.makeText(this,
-                        "Camera AND storage permission are required for this demo", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.permission_explanation, Toast.LENGTH_LONG).show();
             }
             requestPermissions(new String[] {PERMISSION_CAMERA, PERMISSION_STORAGE}, PERMISSIONS_REQUEST);
         }
