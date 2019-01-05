@@ -22,11 +22,13 @@ public class ImageManager
 {
     private static final Logger LOGGER = new Logger();
 
+     // R.string needs a Context which this class doesn't have.
+     // For simplicity just hardcode the app name here.
     public static final String SAVE_PATH =
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                 .getAbsolutePath()
                     + File.separator
-                    + "Segmentation";
+                    + "AiCamera";
 
     /**
      * List of identifiers of currently processing images.

@@ -98,7 +98,7 @@ public class CameraActivity extends AppCompatActivity
             switch (v.getId()) {
                 case R.id.take_picture:
                     final Long timeStamp = System.currentTimeMillis();
-                    mFilename = "IMG_" + timeStamp.toString() + ".png";
+                    mFilename = "IMG_" + timeStamp.toString() + ".jpg";
                     ImageManager.getInstance().addPendingImage(mFilename);
                     mCameraView.takePicture();
                     break;
