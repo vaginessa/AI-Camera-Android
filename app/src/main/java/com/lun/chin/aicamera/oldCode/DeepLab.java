@@ -3,7 +3,7 @@ package com.lun.chin.aicamera.oldCode;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 
-import com.lun.chin.aicamera.Classifier;
+import com.lun.chin.aicamera.classifier.Classifier;
 import com.lun.chin.aicamera.env.Logger;
 
 import org.tensorflow.Graph;

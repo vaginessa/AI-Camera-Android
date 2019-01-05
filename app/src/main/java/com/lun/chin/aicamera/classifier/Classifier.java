@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-package com.lun.chin.aicamera;
+package com.lun.chin.aicamera.classifier;
 
 import android.graphics.Bitmap;
 import android.graphics.RectF;

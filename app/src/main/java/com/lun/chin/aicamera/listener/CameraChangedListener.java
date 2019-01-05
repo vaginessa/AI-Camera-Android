@@ -1,4 +1,4 @@
-package com.lun.chin.aicamera;
+package com.lun.chin.aicamera.listener;
 
 import android.hardware.Camera;
 

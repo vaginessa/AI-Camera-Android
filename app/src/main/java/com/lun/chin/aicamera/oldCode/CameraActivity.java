@@ -42,13 +42,13 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
 
-import com.lun.chin.aicamera.CameraChangedListener;
+import com.lun.chin.aicamera.listener.CameraChangedListener;
 import com.lun.chin.aicamera.GalleryViewPagerFragment;
 import com.lun.chin.aicamera.ImageManager;
 import com.lun.chin.aicamera.OverlayView;
 import com.lun.chin.aicamera.R;
 import com.lun.chin.aicamera.RecyclerViewFragment;
-import com.lun.chin.aicamera.RunInBackgroundListener;
+import com.lun.chin.aicamera.listener.RunInBackgroundListener;
 import com.lun.chin.aicamera.env.ImageUtils;
 import com.lun.chin.aicamera.env.Logger;
 

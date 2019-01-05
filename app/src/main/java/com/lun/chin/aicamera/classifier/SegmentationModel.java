@@ -1,4 +1,4 @@
-package com.lun.chin.aicamera;
+package com.lun.chin.aicamera.classifier;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;

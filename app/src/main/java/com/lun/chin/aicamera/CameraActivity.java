@@ -16,6 +16,8 @@ import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import com.lun.chin.aicamera.classifier.Classifier;
+import com.lun.chin.aicamera.classifier.SegmentationModel;
 import com.lun.chin.aicamera.env.ImageUtils;
 import com.lun.chin.aicamera.env.Logger;
 

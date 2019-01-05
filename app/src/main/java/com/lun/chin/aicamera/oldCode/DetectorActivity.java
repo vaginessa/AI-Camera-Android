@@ -7,12 +7,12 @@ import android.media.ImageReader;
 import android.util.Size;
 import android.widget.Toast;
 
-import com.lun.chin.aicamera.Classifier;
+import com.lun.chin.aicamera.classifier.Classifier;
 import com.lun.chin.aicamera.ImageData;
 import com.lun.chin.aicamera.ImageManager;
 import com.lun.chin.aicamera.OverlayView;
 import com.lun.chin.aicamera.R;
-import com.lun.chin.aicamera.SegmentationModel;
+import com.lun.chin.aicamera.classifier.SegmentationModel;
 import com.lun.chin.aicamera.env.ImageUtils;
 import com.lun.chin.aicamera.env.Logger;
 

@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.util.List;
 
 import com.lun.chin.aicamera.AutoFitTextureView;
-import com.lun.chin.aicamera.CameraChangedListener;
+import com.lun.chin.aicamera.listener.CameraChangedListener;
 import com.lun.chin.aicamera.R;
 import com.lun.chin.aicamera.env.Logger;
 import com.lun.chin.aicamera.env.ImageUtils;

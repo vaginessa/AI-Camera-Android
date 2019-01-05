@@ -20,7 +20,7 @@ import android.graphics.Bitmap;
 import android.os.Trace;
 import android.util.Log;
 
-import com.lun.chin.aicamera.Classifier;
+import com.lun.chin.aicamera.classifier.Classifier;
 
 import org.tensorflow.Operation;
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
