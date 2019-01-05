@@ -111,6 +111,8 @@ public interface Classifier {
 
   List<Recognition> recognizeImage(Bitmap bitmap);
 
+  List<Recognition> recognizeImage(byte[] data, int height, int width);
+
   void enableStatLogging(final boolean debug);
 
   String getStatString();

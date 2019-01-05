@@ -1,25 +1,18 @@
-package com.lun.chin.aicamera;
+package com.lun.chin.aicamera.oldCode;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
-import android.graphics.RectF;
 
+import com.lun.chin.aicamera.Classifier;
 import com.lun.chin.aicamera.env.Logger;
 
 import org.tensorflow.Graph;
 import org.tensorflow.Operation;
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Vector;
 
 public class DeepLab implements Classifier {
     private static final Logger LOGGER = new Logger();
@@ -106,6 +99,11 @@ public class DeepLab implements Classifier {
         recognitions.add(recognition);
 
         return recognitions;
+    }
+
+    @Override
+    public List<Recognition> recognizeImage(byte[] data, int height, int width) {
+        return null;
     }
 
     @Override

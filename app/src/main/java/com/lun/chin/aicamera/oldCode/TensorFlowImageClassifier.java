@@ -13,12 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-package com.lun.chin.aicamera;
+package com.lun.chin.aicamera.oldCode;
 
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.os.Trace;
 import android.util.Log;
+
+import com.lun.chin.aicamera.Classifier;
 
 import org.tensorflow.Operation;
 import org.tensorflow.contrib.android.TensorFlowInferenceInterface;
@@ -182,6 +184,11 @@ public class TensorFlowImageClassifier implements Classifier {
     }
     Trace.endSection(); // "recognizeImage"
     return recognitions;
+  }
+
+  @Override
+  public List<Recognition> recognizeImage(byte[] data, int height, int width) {
+    return null;
   }
 
   @Override

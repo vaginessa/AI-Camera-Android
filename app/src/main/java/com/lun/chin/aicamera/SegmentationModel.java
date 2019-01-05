@@ -72,7 +72,12 @@ public class SegmentationModel implements Classifier {
             byteValues[i * 3 + 0] = (byte) ((intValues[i] >> 16) & 0xFF);
         }
 
-        mInferenceInterface.feed(mInputTensorName, byteValues, 1, inputHeight, inputWidth, 3);
+        return recognizeImage(byteValues, inputHeight, inputWidth);
+    }
+
+    @Override
+    public List<Recognition> recognizeImage(final byte[] data, int inputHeight, int inputWidth) {
+        mInferenceInterface.feed(mInputTensorName, data, 1, inputHeight, inputWidth, 3);
         mInferenceInterface.run(mOutputTensorNames, false);
 
         // outputSegMap is an array where each element is an integer corresponding to the class label.

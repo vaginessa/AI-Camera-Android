@@ -1,4 +1,4 @@
-package com.lun.chin.aicamera;
+package com.lun.chin.aicamera.oldCode;
 
 import android.app.Activity;
 import android.support.v4.app.Fragment;
@@ -15,7 +15,7 @@ public class CameraFragment extends Fragment {
     };
 
     public interface OnCameraButtonClickedListener {
-        public void onCameraButtonClicked(View v);
+        void onCameraButtonClicked(View v);
     }
 
     @Override
@@ -28,7 +28,7 @@ public class CameraFragment extends Fragment {
             mCameraButtonCallback = (OnCameraButtonClickedListener) activity;
         } catch (ClassCastException e) {
             throw new ClassCastException(activity.toString()
-                    + " must implement OnHeadlineSelectedListener");
+                    + " must implement OnCameraButtonClickedListener");
         }
     }
 }

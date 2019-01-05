@@ -1,4 +1,4 @@
-package com.lun.chin.aicamera;
+package com.lun.chin.aicamera.oldCode;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -36,7 +36,6 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -52,6 +51,8 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import com.lun.chin.aicamera.AutoFitTextureView;
+import com.lun.chin.aicamera.R;
 import com.lun.chin.aicamera.env.Logger;
 
 

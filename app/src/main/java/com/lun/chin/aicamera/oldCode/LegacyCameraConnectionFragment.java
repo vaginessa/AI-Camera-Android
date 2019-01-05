@@ -1,4 +1,4 @@
-package com.lun.chin.aicamera;
+package com.lun.chin.aicamera.oldCode;
 
 /*
  * Copyright 2017 The TensorFlow Authors. All Rights Reserved.
@@ -29,12 +29,14 @@ import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageButton;
 
 import java.io.IOException;
 import java.util.List;
 
+import com.lun.chin.aicamera.AutoFitTextureView;
+import com.lun.chin.aicamera.CameraChangedListener;
+import com.lun.chin.aicamera.R;
 import com.lun.chin.aicamera.env.Logger;
 import com.lun.chin.aicamera.env.ImageUtils;
 

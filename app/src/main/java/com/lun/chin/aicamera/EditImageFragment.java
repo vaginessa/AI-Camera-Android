@@ -1,8 +1,9 @@
 package com.lun.chin.aicamera;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.support.v4.app.Fragment;
 import android.util.Size;
 import android.view.LayoutInflater;
@@ -13,6 +14,7 @@ import android.widget.SeekBar;
 
 import com.lun.chin.aicamera.env.ImageUtils;
 import com.github.chrisbanes.photoview.PhotoView;
+import com.lun.chin.aicamera.env.Logger;
 
 
 /**
@@ -21,6 +23,7 @@ import com.github.chrisbanes.photoview.PhotoView;
  * create an instance of this fragment.
  */
 public class EditImageFragment extends Fragment {
+    private static final Logger LOGGER = new Logger();
     private static final String EXTRA_IMAGE = "image_item";
 
     private ImageItem mImageItem;
@@ -28,7 +31,8 @@ public class EditImageFragment extends Fragment {
     private Bitmap mProcessedBitmap;
     private PhotoView mPhotoView;
     private ImageButton mSaveButton;
-    private RunInBackgroundListener mBackgroundRunner;
+    private HandlerThread mBackgroundThread;
+    private Handler mBackgroundHandler;
 
     private final int MAX_BLUR = 12;
 
@@ -121,7 +125,7 @@ public class EditImageFragment extends Fragment {
                 mImageData.setBlurAmount(mBlurAmount);
                 ImageManager.getInstance().cacheBitmap(mImageItem.getTitle(), mProcessedBitmap);
 
-                mBackgroundRunner.run(new Runnable() {
+                mBackgroundHandler.post(new Runnable() {
                     @Override
                     public void run() {
                         Bitmap result = Bitmap.createBitmap(mImageData.getOriginalImage());
@@ -142,23 +146,20 @@ public class EditImageFragment extends Fragment {
             }
         });
         mSaveButton.setEnabled(false);
+
+        startBackgroundThread();
     }
 
     @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof RunInBackgroundListener) {
-            mBackgroundRunner = (RunInBackgroundListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement RunInBackgroundListener");
-        }
+    public void onResume() {
+        super.onResume();
+        startBackgroundThread();
     }
 
     @Override
-    public void onDetach() {
-        super.onDetach();
-        mBackgroundRunner = null;
+    public void onPause() {
+        super.onPause();
+        stopBackgroundThread();
     }
 
     private void processImage(int blurAmount, boolean grayscale) {
@@ -175,5 +176,22 @@ public class EditImageFragment extends Fragment {
 
         mPhotoView.setImageBitmap(mProcessedBitmap);
         mSaveButton.setEnabled(true);
+    }
+
+    private void startBackgroundThread() {
+        mBackgroundThread = new HandlerThread("EditBackground");
+        mBackgroundThread.start();
+        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+
+    private void stopBackgroundThread() {
+        mBackgroundThread.quitSafely();
+        try {
+            mBackgroundThread.join();
+            mBackgroundThread = null;
+            mBackgroundHandler = null;
+        } catch (final InterruptedException e) {
+            LOGGER.e(e, "Exception!");
+        }
     }
 }
