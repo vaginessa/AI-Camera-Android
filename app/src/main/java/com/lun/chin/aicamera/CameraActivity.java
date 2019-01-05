@@ -40,7 +40,7 @@ public class CameraActivity extends AppCompatActivity
     private static final String PERMISSION_CAMERA = Manifest.permission.CAMERA;
     private static final String PERMISSION_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE;
     private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
-    private static final int INFERENCE_SIZE = 200; // Length of the longest edge.
+    private static final int INFERENCE_SIZE = 150; // Length of the longest edge.
     private static final int PICTURE_INFERENCE_SIZE = 500; // Length of the longest edge.
 
     // ShuffleSeg configs.
