@@ -230,8 +230,10 @@ public abstract class CameraViewBase extends AutoFitTextureView implements
                 Core.rotate(src, dst, Core.ROTATE_90_CLOCKWISE);
             else if (mRotation == 180)
                 Core.rotate(src, dst, Core.ROTATE_180);
-            else if (mRotation == 270)
+            else if (mRotation == 270) {
                 Core.rotate(src, dst, Core.ROTATE_90_COUNTERCLOCKWISE);
+                Core.flip(dst, dst, 1);
+            }
         }
 
         public Mat gray() {
