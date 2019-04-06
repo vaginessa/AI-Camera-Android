@@ -387,6 +387,7 @@ public class CameraActivity extends AppCompatActivity
         });
     }
 
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         SubMenu effectsMenu = menu.addSubMenu(R.string.effects);
         mItemPreviewNone = effectsMenu.add(R.string.none);
@@ -399,6 +400,7 @@ public class CameraActivity extends AppCompatActivity
         return true;
     }
 
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item == mItemPreviewNone) {
             mGrayScale = false;
