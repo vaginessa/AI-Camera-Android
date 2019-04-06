@@ -76,7 +76,7 @@ public class ImageUtils {
         }
         try {
             final FileOutputStream out = new FileOutputStream(file);
-            bitmap.compress(Bitmap.CompressFormat.PNG, 99, out);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 99, out);
             out.flush();
             out.close();
         } catch (final Exception e) {
@@ -425,17 +425,22 @@ public class ImageUtils {
             long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight, int blurAmount, boolean grayscale);
 
     public static void applyMask(Bitmap src, Bitmap dst, int[] mask, int maskWidth, int maskHeight, int blurAmount, boolean grayscale) {
-        final int w = src.getWidth();
-        final int h = src.getHeight();
-
         Mat img = new Mat();
         Utils.bitmapToMat(src, img);
+
+        applyMask(img, dst, mask, maskWidth, maskHeight, blurAmount, grayscale);
+    }
+
+    public static void applyMask(Mat src, Bitmap dst, int[] mask, int maskWidth, int maskHeight, int blurAmount, boolean grayscale) {
+        final int w = src.width();
+        final int h = src.height();
+
         Mat maskMat = new Mat(maskHeight, maskWidth, CvType.CV_32SC1);
-        Mat outImage = new Mat(img.size(), img.type());
+        Mat outImage = new Mat(src.size(), src.type());
         maskMat.put(0, 0, mask);
 
         // Add bokeh effect.
-        bokeh(img.getNativeObjAddr(),
+        bokeh(src.getNativeObjAddr(),
                 maskMat.getNativeObjAddr(),
                 outImage.getNativeObjAddr(),
                 w,

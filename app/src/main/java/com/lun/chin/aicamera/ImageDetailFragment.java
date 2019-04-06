@@ -13,6 +13,7 @@ import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.github.chrisbanes.photoview.PhotoView;
+import com.lun.chin.aicamera.listener.OnDeleteImageListener;
 
 public class ImageDetailFragment extends Fragment {
     private static final String EXTRA_IMAGE = "image_item";

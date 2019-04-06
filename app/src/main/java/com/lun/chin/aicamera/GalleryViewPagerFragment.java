@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.view.ViewPager;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -27,6 +29,7 @@ public class GalleryViewPagerFragment extends Fragment {
         args.putInt(EXTRA_INITIAL_POS, current);
         args.putParcelableArrayList(EXTRA_IMAGES, images);
         fragment.setArguments(args);
+        fragment.setHasOptionsMenu(true);
         return fragment;
     }
 
@@ -68,6 +71,11 @@ public class GalleryViewPagerFragment extends Fragment {
         mAdapter = new GalleryPagerAdapter(getChildFragmentManager(), images);
         mViewPager.setAdapter(mAdapter);
         mViewPager.setCurrentItem(mCurrentPos);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        menu.clear();
     }
 
     public void notifyImageChange(String filename) {

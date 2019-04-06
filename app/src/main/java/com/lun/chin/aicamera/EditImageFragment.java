@@ -1,8 +1,9 @@
 package com.lun.chin.aicamera;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.support.v4.app.Fragment;
 import android.util.Size;
 import android.view.LayoutInflater;
@@ -13,6 +14,7 @@ import android.widget.SeekBar;
 
 import com.lun.chin.aicamera.env.ImageUtils;
 import com.github.chrisbanes.photoview.PhotoView;
+import com.lun.chin.aicamera.env.Logger;
 
 
 /**
@@ -28,8 +30,6 @@ public class EditImageFragment extends Fragment {
     private Bitmap mProcessedBitmap;
     private PhotoView mPhotoView;
     private ImageButton mSaveButton;
-    private RunInBackgroundListener mBackgroundRunner;
-
     private final int MAX_BLUR = 12;
 
     // Current settings.
@@ -121,44 +121,24 @@ public class EditImageFragment extends Fragment {
                 mImageData.setBlurAmount(mBlurAmount);
                 ImageManager.getInstance().cacheBitmap(mImageItem.getTitle(), mProcessedBitmap);
 
-                mBackgroundRunner.run(new Runnable() {
-                    @Override
-                    public void run() {
-                        Bitmap result = Bitmap.createBitmap(mImageData.getOriginalImage());
-                        int blurAmount = Math.round(
-                                (float)mImageData.getBlurAmount() * result.getWidth() / mProcessedBitmap.getWidth());
+                Bitmap result = Bitmap.createBitmap(mImageData.getOriginalImage());
+                int blurAmount = Math.round(
+                        (float) mImageData.getBlurAmount() * result.getWidth() / mProcessedBitmap.getWidth());
 
-                        ImageUtils.applyMask(mImageData.getOriginalImage(),
-                                result,
-                                mImageData.getMask(),
-                                mImageData.getMaskWidth(),
-                                mImageData.getMaskHeight(),
-                                blurAmount,
-                                mImageData.isGrayscale());
-                        ImageManager.getInstance().saveBitmap(mImageItem.getTitle(), result);
-                    }
-                });
+                ImageUtils.applyMask(mImageData.getOriginalImage(),
+                        result,
+                        mImageData.getMask(),
+                        mImageData.getMaskWidth(),
+                        mImageData.getMaskHeight(),
+                        blurAmount,
+                        mImageData.isGrayscale());
+
+                ImageManager.getInstance().saveBitmapAsync(mImageItem.getTitle(), result);
+
                 getActivity().getSupportFragmentManager().popBackStackImmediate();
             }
         });
         mSaveButton.setEnabled(false);
-    }
-
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (context instanceof RunInBackgroundListener) {
-            mBackgroundRunner = (RunInBackgroundListener) context;
-        } else {
-            throw new RuntimeException(context.toString()
-                    + " must implement RunInBackgroundListener");
-        }
-    }
-
-    @Override
-    public void onDetach() {
-        super.onDetach();
-        mBackgroundRunner = null;
     }
 
     private void processImage(int blurAmount, boolean grayscale) {
