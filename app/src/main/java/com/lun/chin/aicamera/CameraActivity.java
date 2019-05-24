@@ -43,7 +43,7 @@ public class CameraActivity extends AppCompatActivity
     private static final String PERMISSION_CAMERA = Manifest.permission.CAMERA;
     private static final String PERMISSION_STORAGE = Manifest.permission.WRITE_EXTERNAL_STORAGE;
     private static final Size DESIRED_PREVIEW_SIZE = new Size(640, 480);
-    private static final int INFERENCE_SIZE = 150; // Length of the longest edge.
+    private static final int PREVIEW_INFERENCE_SIZE = 150; // Length of the longest edge.
     private static final int PICTURE_INFERENCE_SIZE = 500; // Length of the longest edge.
 
     // ShuffleSeg configs.
@@ -58,8 +58,8 @@ public class CameraActivity extends AppCompatActivity
     private Classifier mDetector;
 
     // Variables for the preview.
-    private Bitmap mBitmap;
-    private Mat mMat;
+    private Bitmap mPreviewBitmap;
+    private Mat mPreviewMat;
     private Mat mInferenceMat;
     private int mInferenceWidth;
     private int mInferenceHeight;
@@ -74,6 +74,7 @@ public class CameraActivity extends AppCompatActivity
     private String mFilename;
     private boolean mPausePreviewProcessing = false;
 
+    // Default settings for the preview.
     private int mPreviewBlurAmount = 7;
     private boolean mGrayScale = true;
 
@@ -252,12 +253,12 @@ public class CameraActivity extends AppCompatActivity
         int width = previewSize.getHeight();
         int height = previewSize.getWidth();
         mPreviewWidth = width;
-        float scale = INFERENCE_SIZE / (float)Math.max(width, height);
+        float scale = PREVIEW_INFERENCE_SIZE / (float)Math.max(width, height);
         mInferenceWidth = (int)(width * scale);
         mInferenceHeight = (int)(height * scale);
 
-        mBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        mMat = new Mat(height, width, CvType.CV_8UC3);
+        mPreviewBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        mPreviewMat = new Mat(height, width, CvType.CV_8UC3);
         mInferenceMat = new Mat(mInferenceHeight, mInferenceWidth, CvType.CV_8UC3);
 
         width = pictureSize.getHeight();
@@ -276,14 +277,14 @@ public class CameraActivity extends AppCompatActivity
 
     @Override
     public Bitmap processPreview(CameraViewBase.CameraFrame frame) {
-        mMat = frame.rgb();
+        mPreviewMat = frame.rgb();
 
         if (mPausePreviewProcessing) {
-            Utils.matToBitmap(mMat, mBitmap);
-            return mBitmap;
+            Utils.matToBitmap(mPreviewMat, mPreviewBitmap);
+            return mPreviewBitmap;
         }
 
-        Imgproc.resize(mMat, mInferenceMat, new org.opencv.core.Size(mInferenceWidth, mInferenceHeight));
+        Imgproc.resize(mPreviewMat, mInferenceMat, new org.opencv.core.Size(mInferenceWidth, mInferenceHeight));
 
         int length = (int)(mInferenceMat.total() * mInferenceMat.channels());
         byte matData[] = new byte[length];
@@ -294,17 +295,25 @@ public class CameraActivity extends AppCompatActivity
 
         Classifier.Recognition result = results.get(0);
         ImageUtils.applyMask(
-                mMat,
-                mBitmap,
+                mPreviewMat,
+                mPreviewBitmap,
                 result.getMask(),
                 mInferenceWidth,
                 mInferenceHeight,
                 mPreviewBlurAmount,
                 mGrayScale);
 
-        return mBitmap;
+        return mPreviewBitmap;
     }
 
+    /**
+     * Run segmentation on the captured image and apply effects to the background.
+     * Processing is done on a smaller image first in order to display the result to the
+     * user sooner. Then processing is done on the full size image in the background and save
+     * to disk.
+     *
+     * @param frame Contains the data of the captured image.
+     */
     @Override
     public void processPicture(final CameraViewBase.CameraFrame frame) {
         LOGGER.d("processPicture");
@@ -342,6 +351,8 @@ public class CameraActivity extends AppCompatActivity
                 Classifier.Recognition result = results.get(0);
                 int[] mask = result.getMask();
 
+                // Scale the blur amount by the ratio of image size so that the result looks the
+                // same as in the preview.
                 int blurAmount = Math.round((float)mPreviewBlurAmount * disWidth / mPreviewWidth);
 
                 ImageUtils.applyMask(displayMat,
