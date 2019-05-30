@@ -84,6 +84,6 @@ dependencies {
     if (nativeBuildSystem == 'cmake' || nativeBuildSystem == 'none') {
         compile 'org.tensorflow:tensorflow-android:+'
     }
-    compile 'com.github.chrisbanes:PhotoView:2.1.4'
-    compile 'com.android.support:recyclerview-v7:27.0.2'
+    implementation 'com.github.chrisbanes:PhotoView:2.1.4'
+    implementation 'com.android.support:recyclerview-v7:27.1.1'
 }
