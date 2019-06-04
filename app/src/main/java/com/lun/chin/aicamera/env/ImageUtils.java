@@ -342,7 +342,7 @@ public class ImageUtils {
         return matrix;
     }
 
-    public static int calculateInSampleSize(BitmapFactory.Options options,
+    private static int calculateInSampleSize(BitmapFactory.Options options,
                                             int reqWidth,
                                             int reqHeight) {
 
@@ -353,7 +353,7 @@ public class ImageUtils {
         return calculateInSampleSize(width, height, reqWidth, reqHeight);
     }
 
-    public static int calculateInSampleSize(int width,
+    private static int calculateInSampleSize(int width,
                                             int height,
                                             int reqWidth,
                                             int reqHeight) {
@@ -376,6 +376,14 @@ public class ImageUtils {
         return inSampleSize;
     }
 
+    /**
+     * Create a bitmap of the specified width and height from an image file.
+     *
+     * @param filepath Path to the image file.
+     * @param reqWidth The desired width of the resulting bitmap.
+     * @param reqHeight The desired height of the resulting bitmap.
+     * @return A bitmap representing the image file.
+     */
     public static Bitmap decodeSampledBitmapFromFile(String filepath,
                                                      int reqWidth,
                                                      int reqHeight) {
@@ -431,6 +439,20 @@ public class ImageUtils {
         applyMask(img, dst, mask, maskWidth, maskHeight, blurAmount, grayscale);
     }
 
+    /**
+     * Calls native method to blur the background according to the mask data.
+     *
+     * The mask may not be of the same size as the source image. The native method will resize the
+     * mask so that they are equal.
+     *
+     * @param src An OpenCV Mat representing the original image.
+     * @param dst Bitmap to store the result.
+     * @param mask Int array indicating the pixel location of the background and foreground of the source image.
+     * @param maskWidth The width of the mask.
+     * @param maskHeight The height of the mask.
+     * @param blurAmount The intensity of blur to apply. Larger equals blurrier.
+     * @param grayscale Whether to turn the background to black and white or not.
+     */
     public static void applyMask(Mat src, Bitmap dst, int[] mask, int maskWidth, int maskHeight, int blurAmount, boolean grayscale) {
         final int w = src.width();
         final int h = src.height();
@@ -451,4 +473,3 @@ public class ImageUtils {
         Utils.matToBitmap(outImage, dst);
     }
 }
-

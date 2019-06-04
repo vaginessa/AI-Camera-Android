@@ -47,16 +47,6 @@ void circleBlur(Mat &src, Mat &dst)
     filter2D(src, dst, -1, kernel);
 }
 
-extern "C"
-{
-    void JNICALL Java_com_example_chin_nativeopencvtest_MainActivity_gray(JNIEnv *env,
-                                                                          jobject instance,
-                                                                          jlong matAddr) {
-        Mat &mat = *(Mat *) matAddr;
-        cvtColor(mat, mat, COLOR_BGR2GRAY);
-    }
-}
-
 void alphaBlendWithMultiplier(cv::Mat &foreground, cv::Mat &background, cv::Mat &alpha, cv::Mat &result, float multiplier) {
     const uchar *fptr;
     const uchar *bptr;
@@ -105,86 +95,15 @@ void alphaBlendWithMultiplier(cv::Mat &foreground, cv::Mat &background, cv::Mat 
 
 extern "C"
 {
-void JNICALL Java_com_lun_chin_aicamera_DetectorActivity_process(JNIEnv *env,
-                                                                                 jobject instance,
-                                                                                 jlong matAddr,
-                                                                                 jlong maskAddr,
-                                                                                 jlong resultAddr,
-                                                                                 jint previewWidth,
-                                                                                 jint previewHeight) {
-
-    const int erodeIter = 1;
-    const int dilateIter = 1;
-    const int elementSize = 40;
-    const int erodeElementSize = 50;
-    const float multiplier = 4.0f;
-
-    Mat &img = *(Mat *) matAddr;
-    Mat &maskImg = *(Mat *) maskAddr;
-    Mat &result = *(Mat *) resultAddr;
-
-    // Resize mask to original size;
-    maskImg.convertTo(maskImg, CV_8UC1);
-    int sideLength = max(previewHeight, previewWidth);
-    Size size(sideLength, sideLength);
-    resize(maskImg, maskImg, size);
-    cv::threshold(maskImg, maskImg, 0, 255, cv::THRESH_BINARY);
-
-    // Crop mask back to the original dimensions.
-    auto rect = Rect(0, 0, previewWidth, previewHeight);
-    maskImg = maskImg(rect);
-
-    // Find edges.
-    auto refinedMask = cv::Mat(img.size(), img.type());
-    cv::Canny(img, refinedMask, 50, 100);
-
-    auto structuringElement = cv::getStructuringElement(
-            cv::MORPH_RECT,
-            cv::Size(elementSize, elementSize));
-
-    auto erodeStructuringElement = cv::getStructuringElement(
-            cv::MORPH_RECT,
-            cv::Size(erodeElementSize, erodeElementSize));
-
-    // Get sure background.
-    auto sureBg = cv::Mat(maskImg.size(), maskImg.type());
-    cv::dilate(maskImg, sureBg, structuringElement, cv::Point(-1, -1), dilateIter);
-
-    // Get sure foreground.
-    auto sureFg = cv::Mat(maskImg.size(), maskImg.type());
-    cv::erode(maskImg, sureFg, erodeStructuringElement, cv::Point(-1, -1), erodeIter);
-
-    refinedMask = refinedMask | sureFg;
-    refinedMask = refinedMask & sureBg;
-
-    // Get refined mask by closing.
-    cv::morphologyEx(refinedMask, refinedMask, cv::MORPH_CLOSE, structuringElement);
-
-    // Blur the background.
-    cv::Mat imgBlur;
-    cv::blur(img, imgBlur, cv::Size(20, 20));
-
-    // Do distance transform on the mask to get the amount for alpha blending.
-    cv::Mat dist;
-    cv::distanceTransform(refinedMask, dist, cv::DIST_L2, 3);
-    cv::normalize(dist, dist, 0.0, 1.0, cv::NORM_MINMAX);
-
-    // Alpha blend the foreground onto the blurred image.
-    alphaBlendWithMultiplier(img, imgBlur, dist, result, multiplier);
-}
-}
-
-extern "C"
-{
 void JNICALL Java_com_lun_chin_aicamera_env_ImageUtils_bokeh(JNIEnv *env,
-                                                                             jobject instance,
-                                                                             jlong matAddr,
-                                                                             jlong maskAddr,
-                                                                             jlong resultAddr,
-                                                                             jint pictureWidth,
-                                                                             jint pictureHeight,
-                                                                             jint blurAmount,
-                                                                             jboolean grayscale) {
+                                                             jobject instance,
+                                                             jlong matAddr,
+                                                             jlong maskAddr,
+                                                             jlong resultAddr,
+                                                             jint pictureWidth,
+                                                             jint pictureHeight,
+                                                             jint blurAmount,
+                                                             jboolean grayscale) {
     const float multiplier = 13.0f;
 
     Mat &img = *(Mat *) matAddr;
@@ -202,7 +121,6 @@ void JNICALL Java_com_lun_chin_aicamera_env_ImageUtils_bokeh(JNIEnv *env,
 
     // The circleBlur function is slow. Use the built in blur for now.
     //circleBlur(img, imgBlur);
-    //cv::GaussianBlur(img, imgBlur, cv::Size(7, 7), 40);
     blurAmount = blurAmount % 2 == 0 ? blurAmount + 1 : blurAmount; // Needs to be an odd number.
     blur(img, imgBlur, cv::Size(blurAmount, blurAmount));
 

@@ -2,8 +2,6 @@ package com.lun.chin.aicamera;
 
 import android.graphics.Bitmap;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.support.v4.app.Fragment;
 import android.util.Size;
 import android.view.LayoutInflater;
@@ -12,9 +10,8 @@ import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.SeekBar;
 
-import com.lun.chin.aicamera.env.ImageUtils;
 import com.github.chrisbanes.photoview.PhotoView;
-import com.lun.chin.aicamera.env.Logger;
+import com.lun.chin.aicamera.env.ImageUtils;
 
 
 /**
@@ -59,7 +56,7 @@ public class EditImageFragment extends Fragment {
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
      *
-     * @param imageItem
+     * @param imageItem Path and title of the image.
      * @return A new instance of fragment EditImageFragment.
      */
     public static EditImageFragment newInstance(ImageItem imageItem) {
@@ -78,7 +75,6 @@ public class EditImageFragment extends Fragment {
             mImageData = ImageManager.getInstance().getImageData(mImageItem.getTitle());
             mIsGrayscale = mImageData.isGrayscale();
             mBlurAmount = mImageData.getBlurAmount();
-            // TODO handle null ImageData
         }
     }
 

@@ -2,6 +2,9 @@ package com.lun.chin.aicamera;
 
 import android.graphics.Bitmap;
 
+/**
+ * The bitmap and various other data needed for editing the image.
+ */
 public class ImageData
 {
     private Bitmap mOriginalImage;
