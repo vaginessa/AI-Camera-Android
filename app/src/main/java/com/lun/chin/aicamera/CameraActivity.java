@@ -183,18 +183,9 @@ public class CameraActivity extends AppCompatActivity
     public synchronized void onResume() {
         LOGGER.d("onResume " + this);
         super.onResume();
-
-        if (!OpenCVLoader.initDebug()) {
-            LOGGER.d("Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, _baseLoaderCallback);
-        } else {
-            LOGGER.d("OpenCV library found inside package. Using it!");
-            _baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        if (mCameraView != null) {
+            mCameraView.resumeCamera();
         }
-
-        mHandlerThread = new HandlerThread("inference");
-        mHandlerThread.start();
-        mHandler = new Handler(mHandlerThread.getLooper());
     }
 
     @Override
@@ -209,6 +200,9 @@ public class CameraActivity extends AppCompatActivity
     @Override
     public synchronized void onStop() {
         LOGGER.d("onStop " + this);
+        if (mCameraView != null) {
+            mCameraView.stopCamera();
+        }
         super.onStop();
     }
 
@@ -445,6 +439,18 @@ public class CameraActivity extends AppCompatActivity
                         SHUFFLESEG_INPUT_NAME,
                         SHUFFLESEG_OUTPUT_NAMES);
             }
+
+            if (!OpenCVLoader.initDebug()) {
+                LOGGER.d("Internal OpenCV library not found. Using OpenCV Manager for initialization");
+                OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, _baseLoaderCallback);
+            } else {
+                LOGGER.d("OpenCV library found inside package. Using it!");
+                _baseLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+            }
+
+            mHandlerThread = new HandlerThread("inference");
+            mHandlerThread.start();
+            mHandler = new Handler(mHandlerThread.getLooper());
         } catch (final IOException e) {
             LOGGER.e("Exception initializing classifier!", e);
             finish();
