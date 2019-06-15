@@ -20,8 +20,7 @@ public class GalleryPagerAdapter extends FragmentStatePagerAdapter {
 
     @Override
     public Fragment getItem(final int position) {
-        final ImageItem image = images.get(position);
-        return ImageDetailFragment.newInstance(image, new OnDeleteImageListener() {
+        OnDeleteImageListener onDelete = new OnDeleteImageListener() {
             @Override
             public int describeContents() {
                 return 0;
@@ -35,12 +34,19 @@ public class GalleryPagerAdapter extends FragmentStatePagerAdapter {
                 images.remove(position);
                 notifyDataSetChanged();
             }
-        });
+        };
+
+        if (position >= images.size()) {
+            return ImageDetailFragment.newInstance(new ImageItem("blank", "blank"), onDelete);
+        } else {
+            return ImageDetailFragment.newInstance(images.get(position), onDelete);
+        }
     }
 
     @Override
     public int getCount() {
-        return images.size();
+        int count = images.size();
+        return count == 0 ? 1 : count;
     }
 
     @Override
