@@ -82,7 +82,9 @@ public class ImageDetailFragment extends Fragment {
             @Override
             public void handleMessage(Message message) {
                 Bitmap bitmap = (Bitmap)message.obj;
-                if (bitmap == null) {
+                if (imageItem.getTitle() == "blank") {
+                    textView.setText(R.string.no_photos);
+                } else if (bitmap == null) {
                     textView.setText(R.string.loading_text);
                 } else {
                     textView.setText("");

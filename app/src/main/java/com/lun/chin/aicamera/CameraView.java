@@ -150,6 +150,7 @@ public class CameraView extends CameraViewBase implements Camera.PreviewCallback
     protected void resumeCamera() {
         LOGGER.d("Resume camera preview.");
         if (mCamera != null) {
+            mCamera.setPreviewCallbackWithBuffer(this);
             mCamera.startPreview();
         } else {
             openCamera();
@@ -193,7 +194,7 @@ public class CameraView extends CameraViewBase implements Camera.PreviewCallback
                 Mat mat = Imgcodecs.imdecode(new MatOfByte(data), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
                 CameraFrame frame = new CameraFrame(mat, size.width, size.height, mRotation, ImageFormat.JPEG);
                 mCameraFrameAvailableListener.processPicture(frame);
-                camera.startPreview();
+                resumeCamera();
             }
         });
     }
