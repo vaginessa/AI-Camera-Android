@@ -76,8 +76,11 @@ public class ImageManager
             File[] files = saveDir.listFiles();
             if (files != null) {
                 for (File file : files) {
-                    ImageItem item = new ImageItem(file.getName(), file.getPath());
-                    images.add(item);
+                    String title = file.getName();
+                    if (!mCachedBitmap.containsKey(title)) {
+                        ImageItem item = new ImageItem(title, file.getPath());
+                        images.add(item);
+                    }
                 }
             }
         }
