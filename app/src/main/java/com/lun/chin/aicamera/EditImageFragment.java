@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.util.Size;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
@@ -64,6 +66,7 @@ public class EditImageFragment extends Fragment {
         Bundle args = new Bundle();
         args.putParcelable(EXTRA_IMAGE, imageItem);
         fragment.setArguments(args);
+        fragment.setHasOptionsMenu(true);
         return fragment;
     }
 
@@ -135,6 +138,11 @@ public class EditImageFragment extends Fragment {
             }
         });
         mSaveButton.setEnabled(false);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        menu.clear();
     }
 
     private void processImage(int blurAmount, boolean grayscale) {
