@@ -4,16 +4,21 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.os.Environment;
 
 import com.lun.chin.aicamera.ImageManager;
 
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Utility class for manipulating images.
@@ -432,6 +437,55 @@ public class ImageUtils {
     private static native void bokeh(
             long imgAddr, long maskAddr, long resultAddr, int previewWidth, int previewHeight, int blurAmount, boolean grayscale);
 
+    private static void bokeh(Mat src,
+                              Mat dst,
+                              Mat mask,
+                              int blurAmount,
+                              boolean grayscale) {
+
+        Mat alpha = new Mat(src.size(), CvType.CV_32SC3);
+        Mat beta = new Mat(alpha.size(), alpha.type());
+        Mat dist = new Mat(src.size(), CvType.CV_32SC1);
+        Mat imgBlur = new Mat(src.size(), src.type());
+        Mat intermediate = new Mat(src.size(), src.type());
+        Mat ones = new Mat(alpha.size(), alpha.type(), new Scalar(1.0, 1.0, 1.0));
+
+        double magicNumber = 13.0;
+
+        // blurAmount needs to be an odd number.
+        blurAmount = blurAmount % 2 == 0 ? blurAmount + 1 : blurAmount;
+        Imgproc.blur(src, imgBlur, new Size(blurAmount, blurAmount));
+
+        if (grayscale) {
+            Imgproc.cvtColor(imgBlur, imgBlur, Imgproc.COLOR_BGR2GRAY);
+            Imgproc.cvtColor(imgBlur, imgBlur, Imgproc.COLOR_GRAY2BGR);
+        }
+
+        // Resize mask to original size.
+        mask.convertTo(mask, CvType.CV_8UC1);
+        Imgproc.resize(mask, mask, src.size());
+
+        // Do distance transform on the mask because we want some blurring around the edges of
+        // the object to hide the imperfection of the segmentation. So around the edges we want
+        // to blend more of the background.
+        Imgproc.distanceTransform(mask, dist, Imgproc.DIST_L2, Imgproc.CV_DIST_MASK_PRECISE);
+        Core.normalize(dist, dist, 0.0, 1.0, Core.NORM_MINMAX);
+        Core.multiply(dist, new Scalar(magicNumber), dist);
+        // Cap any values greater than 1.
+        Imgproc.threshold(dist, dist, 1.0, 1.0, Imgproc.THRESH_TRUNC);
+
+        // Merge to create a Mat of 3 channels.
+        dist.convertTo(dist, CvType.CV_32SC1);
+        List<Mat> toMerge = Arrays.asList(dist, dist, dist);
+        Core.merge(toMerge, alpha);
+        Core.subtract(ones, alpha, beta);
+
+        // Do the alpha blending.
+        Core.multiply(src, alpha, intermediate, 1.0, CvType.CV_8UC3);
+        Core.multiply(imgBlur, beta, dst, 1.0, CvType.CV_8UC3);
+        Core.add(intermediate, dst, dst);
+    }
+
     public static void applyMask(Bitmap src, Bitmap dst, int[] mask, int maskWidth, int maskHeight, int blurAmount, boolean grayscale) {
         Mat img = new Mat();
         Utils.bitmapToMat(src, img);
@@ -461,15 +515,24 @@ public class ImageUtils {
         Mat outImage = new Mat(src.size(), src.type());
         maskMat.put(0, 0, mask);
 
-        // Add bokeh effect.
-        bokeh(src.getNativeObjAddr(),
-                maskMat.getNativeObjAddr(),
-                outImage.getNativeObjAddr(),
-                w,
-                h,
-                blurAmount,
-                grayscale);
+        if (useNativeConversion) {
+            try {
+                bokeh(src.getNativeObjAddr(),
+                        maskMat.getNativeObjAddr(),
+                        outImage.getNativeObjAddr(),
+                        w,
+                        h,
+                        blurAmount,
+                        grayscale);
 
+                Utils.matToBitmap(outImage, dst);
+                return;
+            } catch (UnsatisfiedLinkError e) {
+                useNativeConversion = false;
+            }
+        }
+
+        bokeh(src, outImage, maskMat, blurAmount, grayscale);
         Utils.matToBitmap(outImage, dst);
     }
 }
