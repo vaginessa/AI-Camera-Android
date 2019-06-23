@@ -191,7 +191,7 @@ public class CameraView extends CameraViewBase implements Camera.PreviewCallback
                 camera.stopPreview();
                 removeBackgroundTasks(mProcessPreview);
                 Camera.Size size = camera.getParameters().getPictureSize();
-                Mat mat = Imgcodecs.imdecode(new MatOfByte(data), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+                Mat mat = Imgcodecs.imdecode(new MatOfByte(data), Imgcodecs.IMREAD_UNCHANGED);
                 CameraFrame frame = new CameraFrame(mat, size.width, size.height, mRotation, ImageFormat.JPEG);
                 mCameraFrameAvailableListener.processPicture(frame);
                 resumeCamera();

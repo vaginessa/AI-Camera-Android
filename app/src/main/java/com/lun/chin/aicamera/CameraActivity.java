@@ -90,9 +90,6 @@ public class CameraActivity extends AppCompatActivity
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS: {
                     LOGGER.d("OpenCV loaded successfully");
-                    // Load ndk built module, as specified in moduleName in build.gradle
-                    // after opencv initialization
-                    System.loadLibrary("native-lib");
                 }
                 break;
                 default: {
