@@ -450,7 +450,11 @@ public class ImageUtils {
         Mat intermediate = new Mat(src.size(), src.type());
         Mat ones = new Mat(alpha.size(), alpha.type(), new Scalar(1.0, 1.0, 1.0));
 
-        double magicNumber = 13.0;
+        double magicNumber = 10.0;
+
+        if (src.channels() == 4) {
+            Imgproc.cvtColor(src, src, Imgproc.COLOR_BGRA2BGR);
+        }
 
         // blurAmount needs to be an odd number.
         blurAmount = blurAmount % 2 == 0 ? blurAmount + 1 : blurAmount;
